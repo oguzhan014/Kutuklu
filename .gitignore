@@ -30,8 +30,11 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
+# env files — gerçek gizli anahtarları asla commit'leme; .env.example (placeholder) hariç
+.env
+.env.local
+.env.*.local
+!.env.example
 
 # vercel
 .vercel
@@ -39,3 +42,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+/src/generated/prisma
+
+# admin panelinden yüklenen ürün/blog görselleri — çalışma zamanı içeriği
+/public/uploads/*
+!/public/uploads/.gitkeep
