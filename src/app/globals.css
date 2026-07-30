@@ -1,26 +1,347 @@
+/* @import kuralları CSS dosyasının en başında olmalı (Tailwind 4 / PostCSS kuralı) */
+@import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,600&family=Montserrat:wght@300;400;500;600;700&display=swap");
 @import "tailwindcss";
 
+/* ─────────────────────────────────────────
+   KÜTÜKLÜ MARKA RENK SİSTEMİ (Konsept A: Minimal Premium)
+   ───────────────────────────────────────── */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Ana Renkler */
+  --color-black:      #1C1C1C;
+  --color-cream:      #F5F1E8;
+  --color-gold:       #D4AF37;
+  --color-gold-light: #E8D170;
+  --color-gold-dark:  #B8941E;
+  --color-green:      #2F4F2F;
+  --color-green-light:#4A7A4A;
+  --color-green-muted:#3D6B3D;
+
+  /* Nötr */
+  --color-white:      #FFFFFF;
+  --color-cream-dark: #EDE8D8;
+  --color-gray-100:   #F8F7F4;
+  --color-gray-200:   #EDE9DF;
+  --color-gray-300:   #D9D3C3;
+  --color-gray-400:   #B8B0A0;
+  --color-gray-500:   #8A8070;
+  --color-gray-600:   #5C5448;
+  --color-gray-700:   #3A332A;
+  --color-gray-900:   #1C1C1C;
+
+  /* Semantik */
+  --background:       var(--color-white);
+  --foreground:       var(--color-black);
+  --border:           var(--color-gray-200);
+  --muted:            var(--color-gray-100);
+  --muted-foreground: var(--color-gray-500);
+  --accent:           var(--color-gold);
+  --accent-foreground: var(--color-black);
+  --primary:          var(--color-green);
+  --primary-foreground: var(--color-cream);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-background:   var(--background);
+  --color-foreground:   var(--foreground);
+  --color-black:        #1C1C1C;
+  --color-cream:        #F5F1E8;
+  --color-cream-dark:   #EDE8D8;
+  --color-gold:         #D4AF37;
+  --color-gold-light:   #E8D170;
+  --color-gold-dark:    #B8941E;
+  --color-green:        #2F4F2F;
+  --color-green-light:  #4A7A4A;
+  --color-muted:        #F8F7F4;
+  --color-border:       #EDE9DF;
+
+  --font-heading:  "Cormorant Garamond", Georgia, serif;
+  --font-body:     "Montserrat", system-ui, sans-serif;
+  --font-sans:     "Montserrat", system-ui, sans-serif;
+
+  --radius-sm:   4px;
+  --radius-md:   8px;
+  --radius-lg:   12px;
+  --radius-xl:   20px;
+
+  --shadow-sm:   0 1px 3px rgba(28, 28, 28, 0.06);
+  --shadow-md:   0 4px 16px rgba(28, 28, 28, 0.08);
+  --shadow-lg:   0 8px 32px rgba(28, 28, 28, 0.12);
+  --shadow-gold: 0 4px 24px rgba(212, 175, 55, 0.25);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ─────────────────────────────────────────
+   TEMEL STILLER
+   ───────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.6;
+  font-weight: 400;
 }
+
+/* ─────────────────────────────────────────
+   TİPOGRAFİ SİSTEMİ
+   ───────────────────────────────────────── */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--color-black);
+}
+
+h1 { font-size: clamp(2.5rem, 5vw, 4.5rem); font-weight: 500; }
+h2 { font-size: clamp(2rem, 3.5vw, 3rem); font-weight: 500; }
+h3 { font-size: clamp(1.5rem, 2.5vw, 2rem); }
+h4 { font-size: clamp(1.2rem, 2vw, 1.5rem); }
+
+p {
+  font-family: var(--font-body);
+  font-size: 1rem;
+  line-height: 1.7;
+  color: var(--color-gray-600);
+}
+
+/* ─────────────────────────────────────────
+   YARDIMCI SINIFLAR
+   ───────────────────────────────────────── */
+.gold-divider {
+  width: 60px;
+  height: 2px;
+  background: linear-gradient(90deg, var(--color-gold), var(--color-gold-light));
+  display: block;
+  margin: 0 auto;
+}
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--color-green);
+  color: var(--color-cream);
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 14px 32px;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.25s ease;
+  text-decoration: none;
+}
+
+.btn-primary:hover {
+  background: var(--color-green-light);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.btn-gold {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--color-gold);
+  color: var(--color-black);
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 14px 32px;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.25s ease;
+  text-decoration: none;
+}
+
+.btn-gold:hover {
+  background: var(--color-gold-dark);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-gold);
+}
+
+.btn-outline {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  color: var(--color-green);
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 13px 31px;
+  border: 1.5px solid var(--color-green);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.25s ease;
+  text-decoration: none;
+}
+
+.btn-outline:hover {
+  background: var(--color-green);
+  color: var(--color-cream);
+  transform: translateY(-1px);
+}
+
+.container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+@media (min-width: 768px) {
+  .container { padding: 0 48px; }
+}
+
+.section {
+  padding: 80px 0;
+}
+
+@media (min-width: 768px) {
+  .section { padding: 120px 0; }
+}
+
+.section-header {
+  text-align: center;
+  margin-bottom: 60px;
+}
+
+.section-tag {
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--color-gold);
+  display: block;
+  margin-bottom: 12px;
+}
+
+/* ─────────────────────────────────────────
+   ANİMASYONLAR
+   ───────────────────────────────────────── */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position:  200% center; }
+}
+
+.fade-in-up {
+  animation: fadeInUp 0.6s ease forwards;
+}
+
+.gold-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--color-gold-dark) 0%,
+    var(--color-gold-light) 50%,
+    var(--color-gold-dark) 100%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: shimmer 3s linear infinite;
+}
+
+/* ─────────────────────────────────────────
+   SCROLLBAR & SEÇİM
+   ───────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--color-cream); }
+::-webkit-scrollbar-thumb { background: var(--color-gold); border-radius: 3px; }
+
+::selection {
+  background: rgba(212, 175, 55, 0.2);
+  color: var(--color-black);
+}
+
+/* ─────────────────────────────────────────
+   COMPONENT HOVER STİLLERİ (styled-jsx yerine)
+   ───────────────────────────────────────── */
+
+/* Navbar */
+.nav-link:hover { color: var(--color-green) !important; }
+.nav-link::after {
+  content: "";
+  position: absolute;
+  bottom: -4px; left: 0;
+  width: 0; height: 1.5px;
+  background: var(--color-gold);
+  transition: width 0.25s ease;
+}
+.nav-link:hover::after { width: 100%; }
+
+/* Footer */
+.footer-link:hover { color: var(--color-cream) !important; }
+.footer-social:hover {
+  border-color: var(--color-gold) !important;
+  color: var(--color-gold) !important;
+}
+
+/* Ürün Kartı */
+.product-card:hover {
+  transform: translateY(-6px);
+  box-shadow: var(--shadow-lg);
+  border-color: rgba(212, 175, 55, 0.3) !important;
+}
+.cart-btn:hover {
+  background: var(--color-green-light) !important;
+  transform: scale(1.02);
+}
+
+/* Özellik Kartı */
+.feature-card:hover {
+  border-color: var(--color-gold) !important;
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-md);
+}
+
+/* Yorum Kartı */
+.review-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-md);
+  border-color: rgba(212, 175, 55, 0.3) !important;
+}
+
+/* ─────────────────────────────────────────
+   RESPONSIVE (Mobil) - styled-jsx yerine
+   ───────────────────────────────────────── */
+@media (max-width: 768px) {
+  .hero-grid {
+    grid-template-columns: 1fr !important;
+    gap: 40px !important;
+  }
+  .story-grid {
+    grid-template-columns: 1fr !important;
+    gap: 40px !important;
+  }
+  .story-text { padding: 0 !important; }
+  .why-grid {
+    grid-template-columns: 1fr !important;
+    gap: 40px !important;
+  }
+}
+
