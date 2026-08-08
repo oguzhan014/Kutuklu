@@ -32,6 +32,7 @@ export const metadata: Metadata = {
 
 import { CartSidebar } from "@/components/cart/CartSidebar";
 import { FavoritesSync } from "@/components/wishlist/FavoritesSync";
+import { SocialProofToast } from "@/components/common/SocialProofToast";
 
 export default function RootLayout({
   children,
@@ -44,7 +45,9 @@ export default function RootLayout({
         {children}
         <CartSidebar />
         <FavoritesSync />
+        <SocialProofToast />
       </body>
     </html>
   );
 }
+

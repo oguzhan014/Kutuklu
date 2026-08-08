@@ -1,6 +1,7 @@
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { HeroSection } from "@/components/home/HeroSection";
+import { MarqueeTicker } from "@/components/home/MarqueeTicker";
 import { FeaturesSection } from "@/components/home/FeaturesSection";
 import { FeaturedProductsSection } from "@/components/home/FeaturedProductsSection";
 import { WhyKutukluSection } from "@/components/home/WhyKutukluSection";
@@ -20,25 +21,29 @@ export default function HomePage() {
         {/* 1. Hero Banner */}
         <HeroSection />
 
-        {/* 2. Özellikler: Erken Hasat, Soğuk Sıkım, Doğal Üretim */}
+        {/* 2. Sonsuz Kayan Lüks Ticker Bandı (Marquee Bar) */}
+        <MarqueeTicker />
+
+        {/* 3. Özellikler: Erken Hasat, Soğuk Sıkım, Doğal Üretim */}
         <FeaturesSection />
 
-        {/* 3. Öne Çıkan Ürünler */}
+        {/* 4. Öne Çıkan Ürünler (İnteraktif Kartlar & Quick Actions) */}
         <FeaturedProductsSection />
 
-        {/* 4. Neden Kütüklü (Detaylı) */}
+        {/* 5. Neden Kütüklü (Detaylı) */}
         <WhyKutukluSection />
 
-        {/* 5. Bizim Hikayemiz */}
+        {/* 6. Bizim Hikayemiz */}
         <StorySection />
 
-        {/* 6. Müşteri Yorumları */}
+        {/* 7. Müşteri Yorumları */}
         <ReviewsSection />
 
-        {/* 7. E-Bülten & Instagram */}
+        {/* 8. E-Bülten & Instagram */}
         <NewsletterSection />
       </main>
       <Footer />
     </>
   );
 }
+
