@@ -6,8 +6,7 @@ import { useRouter } from "next/navigation";
 import { Star, ShoppingCart, Heart, Minus, Plus, Truck, Leaf, Thermometer, Check, AlertCircle } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import { useCartStore } from "@/lib/store";
-import { useWishlistStore } from "@/lib/wishlist-store";
-import { useWishlistHydrated } from "@/lib/use-wishlist-hydrated";
+import { useWishlist } from "@/lib/use-wishlist";
 import { formatVariantLabel } from "@/lib/variants";
 import { ProductReviews, type PublicReview } from "@/components/urunler/ProductReviews";
 
@@ -180,10 +179,8 @@ export function UrunDetayContent({
 
   const { addItem } = useCartStore();
 
-  const wishlistItems = useWishlistStore((state) => state.items);
-  const toggleWishlist = useWishlistStore((state) => state.toggleItem);
-  const wishlistHydrated = useWishlistHydrated();
-  const isWishlisted = wishlistHydrated && wishlistItems.some((item) => item.productId === urun.id);
+  const { toggle: toggleWishlist, isFavorited } = useWishlist();
+  const isWishlisted = isFavorited(urun.id);
 
   const isVariable = urun.type === "VARIABLE";
 

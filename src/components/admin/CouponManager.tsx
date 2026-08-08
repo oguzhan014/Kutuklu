@@ -14,6 +14,7 @@ export type CouponRecord = {
   value: string;
   minOrderAmount: string | null;
   maxUses: number | null;
+  maxUsesPerUser: number | null;
   usedCount: number;
   isActive: boolean;
   expiresAt: string | null;
@@ -306,6 +307,9 @@ function CouponForm({
     initial?.minOrderAmount ? String(Number(initial.minOrderAmount)) : ""
   );
   const [maxUses, setMaxUses] = useState(initial?.maxUses ? String(initial.maxUses) : "");
+  const [maxUsesPerUser, setMaxUsesPerUser] = useState(
+    initial?.maxUsesPerUser ? String(initial.maxUsesPerUser) : ""
+  );
   const [isActive, setIsActive] = useState(initial?.isActive ?? true);
   const [expiresAt, setExpiresAt] = useState(
     initial?.expiresAt ? new Date(initial.expiresAt).toISOString().slice(0, 10) : ""
@@ -329,6 +333,7 @@ function CouponForm({
       value,
       minOrderAmount,
       maxUses,
+      maxUsesPerUser,
       isActive,
       expiresAt,
     });
@@ -434,7 +439,7 @@ function CouponForm({
         </div>
 
         <div>
-          <label style={labelStyle}>Maks. Kullanım</label>
+          <label style={labelStyle}>Maks. Kullanım (toplam)</label>
           <input
             type="number"
             min={1}
@@ -444,6 +449,31 @@ function CouponForm({
             style={inputStyle}
           />
           <FieldError message={fieldErrors.maxUses} />
+        </div>
+
+        <div>
+          <label style={labelStyle}>Kişi Başı Limit</label>
+          <input
+            type="number"
+            min={1}
+            value={maxUsesPerUser}
+            onChange={(event) => setMaxUsesPerUser(event.target.value)}
+            placeholder="Sınırsız"
+            style={inputStyle}
+          />
+          <span
+            style={{
+              display: "block",
+              marginTop: "5px",
+              fontSize: "0.72rem",
+              color: "var(--color-gray-500)",
+              lineHeight: 1.5,
+            }}
+          >
+            Bir müşterinin kaç kez kullanabileceği. Müşteri, üyeyse hesap
+            e-postasıyla, misafirse sipariş e-postasıyla tanınır.
+          </span>
+          <FieldError message={fieldErrors.maxUsesPerUser} />
         </div>
 
         <div>

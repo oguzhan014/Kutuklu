@@ -2,15 +2,31 @@ import { db } from "@/lib/db";
 import { formatPrice } from "@/lib/utils";
 import { Eye } from "lucide-react";
 import Link from "next/link";
+import { Pagination } from "@/components/admin/Pagination";
+import { ADMIN_PAGE_SIZE, countPages, resolvePage } from "@/lib/pagination";
 
 export const metadata = {
   title: "Siparişler | Kütüklü Admin",
 };
 
-export default async function AdminOrdersPage() {
+export const dynamic = "force-dynamic";
+
+export default async function AdminOrdersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
+  const { page: rawPage } = await searchParams;
+
+  const totalItems = await db.order.count();
+  const totalPages = countPages(totalItems);
+  const page = resolvePage(rawPage, totalPages);
+
   const orders = await db.order.findMany({
     orderBy: { createdAt: "desc" },
-    include: { user: true }
+    include: { user: true },
+    skip: (page - 1) * ADMIN_PAGE_SIZE,
+    take: ADMIN_PAGE_SIZE,
   });
 
   return (
@@ -75,6 +91,14 @@ export default async function AdminOrdersPage() {
           </tbody>
         </table>
       </div>
+
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        totalItems={totalItems}
+        basePath="/admin/orders"
+        itemLabel="sipariş"
+      />
     </div>
   );
 }

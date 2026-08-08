@@ -1,7 +1,12 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { SITE_URL } from "@/lib/site";
 
 export const metadata: Metadata = {
+  // Göreli yolların (OG görseli, canonical) mutlak URL'ye çevrilmesi için
+  // gereklidir. Tanımsızsa sosyal medyada paylaşılan bağlantılarda önizleme
+  // görseli çıkmaz.
+  metadataBase: new URL(SITE_URL),
   title: {
     default: "Kütüklü Zeytinyağı | Köyden Sofraya, Doğanın Saflığı",
     template: "%s | Kütüklü Zeytinyağı",
@@ -26,6 +31,7 @@ export const metadata: Metadata = {
 };
 
 import { CartSidebar } from "@/components/cart/CartSidebar";
+import { FavoritesSync } from "@/components/wishlist/FavoritesSync";
 
 export default function RootLayout({
   children,
@@ -37,6 +43,7 @@ export default function RootLayout({
       <body>
         {children}
         <CartSidebar />
+        <FavoritesSync />
       </body>
     </html>
   );

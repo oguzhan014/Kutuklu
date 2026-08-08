@@ -5,6 +5,8 @@ import { prisma } from "@/lib/prisma";
 import { formatPrice } from "@/lib/utils";
 import { FALLBACK_PRODUCT_IMAGE } from "@/lib/pricing";
 import { ProductRowActions } from "@/components/admin/ProductRowActions";
+import { Pagination } from "@/components/admin/Pagination";
+import { ADMIN_PAGE_SIZE, countPages, resolvePage } from "@/lib/pagination";
 
 export const metadata = {
   title: "Ürünler | Kütüklü Admin",
@@ -19,7 +21,17 @@ const thStyle: React.CSSProperties = {
   borderBottom: "1px solid var(--color-border)",
 };
 
-export default async function AdminProductsPage() {
+export default async function AdminProductsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
+  const { page: rawPage } = await searchParams;
+
+  const totalItems = await prisma.product.count();
+  const totalPages = countPages(totalItems);
+  const page = resolvePage(rawPage, totalPages);
+
   const products = await prisma.product.findMany({
     orderBy: { createdAt: "desc" },
     include: {
@@ -27,6 +39,8 @@ export default async function AdminProductsPage() {
       images: { orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }], take: 1 },
       variants: { select: { stock: true, price: true } },
     },
+    skip: (page - 1) * ADMIN_PAGE_SIZE,
+    take: ADMIN_PAGE_SIZE,
   });
 
   return (
@@ -196,6 +210,14 @@ export default async function AdminProductsPage() {
           </tbody>
         </table>
       </div>
+
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        totalItems={totalItems}
+        basePath="/admin/products"
+        itemLabel="ürün"
+      />
     </div>
   );
 }

@@ -23,15 +23,68 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  accounts            Account[]
-  sessions            Session[]
-  orders              Order[]
-  cart                Cart?
-  addresses           Address[]
-  reviews             Review[]
-  passwordResetTokens PasswordResetToken[]
+  /// Hesap silme talebinde kayıt anonimleştirilir; bu damga o anı tutar.
+  /// Dolu ise kullanıcı giriş yapamaz.
+  anonymizedAt  DateTime?
+
+  accounts               Account[]
+  sessions               Session[]
+  orders                 Order[]
+  cart                   Cart?
+  addresses              Address[]
+  reviews                Review[]
+  favorites              Favorite[]
+  passwordResetTokens    PasswordResetToken[]
+  emailVerificationTokens EmailVerificationToken[]
+  couponRedemptions      CouponRedemption[]
 
   @@map("users")
+}
+
+/**
+ * Üyenin favori (istek listesi) kaydı.
+ *
+ * Yalnızca ürün kimliği tutulur; ad, fiyat ve görsel her okumada Product'tan
+ * taze okunur. Böylece favorilerde eski fiyat gösterilmez.
+ *
+ * Misafirler için favoriler tarayıcıda saklanmaya devam eder; giriş
+ * yapıldığında yereldekiler bu tabloya taşınır.
+ */
+model Favorite {
+  id        String   @id @default(cuid())
+  userId    String
+  productId String
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
+  @@index([userId])
+  @@map("favorites")
+}
+
+/**
+ * E-posta doğrulama token'ları.
+ *
+ * Şifre sıfırlamayla aynı desen: ham token yalnızca e-postada gider,
+ * veritabanında SHA-256 hash'i saklanır.
+ */
+model EmailVerificationToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  /// Token üretildiği andaki e-posta. Kullanıcı arada e-postasını
+  /// değiştirirse eski bağlantı geçersiz sayılır.
+  email     String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("email_verification_tokens")
 }
 
 enum Role {
@@ -149,6 +202,7 @@ model Product {
   cartItems  CartItem[]
   orderItems OrderItem[]
   reviews    Review[]
+  favorites  Favorite[]
 
   @@index([categoryId])
   @@index([isActive, isFeatured])
@@ -267,7 +321,10 @@ model Order {
   status          OrderStatus @default(PENDING)
   paymentStatus   PaymentStatus @default(UNPAID)
   paymentMethod   String?
-  stripePaymentId String?     @unique
+
+  // PayTR sipariş referansı (merchant_oid). Yalnızca alfanumerik olabilir;
+  // PayTR'ye gönderilen ve bildirimde geri gelen kimlik budur.
+  paymentRef      String?     @unique
 
   // Misafir siparişinin sipariş takibi için gizli anahtar.
   // Sipariş detayına oturum sahibi VEYA bu token ile erişilebilir.
@@ -316,9 +373,11 @@ model Order {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  user   User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
-  coupon Coupon?     @relation(fields: [couponId], references: [id], onDelete: SetNull)
-  items  OrderItem[]
+  user             User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
+  coupon           Coupon?           @relation(fields: [couponId], references: [id], onDelete: SetNull)
+  items            OrderItem[]
+  invoice          Invoice?
+  couponRedemption CouponRedemption?
 
   @@index([userId])
   @@index([status])
@@ -372,6 +431,26 @@ model OrderItem {
 }
 
 // ─────────────────────────────────────────
+// FATURA (INVOICE)
+// ─────────────────────────────────────────
+
+model Invoice {
+  id              String    @id @default(cuid())
+  orderId         String    @unique
+  invoiceNumber   String    @unique // 2024-001, 2024-002, etc.
+  filePath        String    // /private/invoices/invoice-2024-001.pdf
+  status          String    @default("generated") // generated, sent, viewed
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  order           Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([createdAt])
+  @@map("invoices")
+}
+
+// ─────────────────────────────────────────
 // ADRES
 // ─────────────────────────────────────────
 
@@ -403,15 +482,51 @@ model Coupon {
   type            CouponType @default(PERCENTAGE)
   value           Decimal    @db.Decimal(10, 2)
   minOrderAmount  Decimal?   @db.Decimal(10, 2)
+  /// Toplam kullanım hakkı (tüm müşteriler). null = sınırsız.
   maxUses         Int?
+  /// Bir müşterinin kullanabileceği azami adet. null = sınırsız.
+  maxUsesPerUser  Int?
   usedCount       Int        @default(0)
   isActive        Boolean    @default(true)
   expiresAt       DateTime?
   createdAt       DateTime   @default(now())
 
-  orders Order[]
+  orders      Order[]
+  redemptions CouponRedemption[]
 
   @@map("coupons")
+}
+
+/**
+ * Bir kuponun tek bir müşteri tarafından kullanımı.
+ *
+ * Kişi başı limit bu tablo üzerinden UYGULANIR: her kullanım için sıfırdan
+ * artan bir `useIndex` yazılır ve `(couponId, email, useIndex)` benzersizdir.
+ * Böylece iki eşzamanlı sipariş aynı sırayı alamaz — limit veritabanı
+ * seviyesinde atomik olarak korunur (stok rezervasyonuyla aynı mantık).
+ *
+ * Kimlik olarak e-posta kullanılır: misafir siparişlerinde elimizdeki tek
+ * tanımlayıcı budur. Üye siparişlerinde ayrıca `userId` de saklanır.
+ */
+model CouponRedemption {
+  id        String   @id @default(cuid())
+  couponId  String
+  userId    String?
+  /// Küçük harfe normalize edilmiş e-posta.
+  email     String
+  orderId   String   @unique
+  /// Bu müşterinin kaçıncı kullanımı (0'dan başlar).
+  useIndex  Int
+  createdAt DateTime @default(now())
+
+  coupon Coupon @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  order  Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  user   User?  @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@unique([couponId, email, useIndex])
+  @@index([couponId, email])
+  @@index([userId])
+  @@map("coupon_redemptions")
 }
 
 enum CouponType {

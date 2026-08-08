@@ -6,7 +6,8 @@ import { toKurus, kurusToDecimalString, kurusToNumber } from "@/lib/money";
 import { CheckoutError, priceCart, type CartLineInput } from "@/lib/pricing";
 import { getSettings } from "@/lib/settings";
 import { formatPrice } from "@/lib/utils";
-import { sendEmail } from "@/lib/email";
+import { sendEmail, type EmailAttachment } from "@/lib/email";
+import { ensureInvoice, readInvoiceFile } from "@/lib/invoice-generator";
 import {
   orderPaidEmail,
   orderPendingTransferEmail,
@@ -29,11 +30,11 @@ function orderUrl(orderNumber: string, accessToken: string): string {
  * 1. createOrder()       → Fiyat sunucuda hesaplanır, stok ve kupon hakkı
  *                          ATOMİK olarak rezerve edilir, sipariş PENDING/UNPAID
  *                          olarak yazılır.
- * 2. Ödeme               → Kart: Stripe PaymentIntent (tutar sunucudan).
+ * 2. Ödeme               → Kart: PayTR iframe (tutar sunucudan).
  *                          Havale: ödeme beklenir.
- * 3. markOrderPaid()     → YALNIZCA Stripe'ın kendisinden gelen doğrulanmış
- *                          bilgiyle (imzalı webhook veya sunucudan API sorgusu)
- *                          çağrılır. Tutar ve para birimi yeniden doğrulanır.
+ * 3. markOrderPaid()     → YALNIZCA PayTR'nin kendisinden gelen doğrulanmış
+ *                          bilgiyle (imzalı bildirim veya sunucudan durum
+ *                          sorgusu) çağrılır. Tutar yeniden doğrulanır.
  * 4. releaseReservation()→ Ödeme başarısız/iptal olursa stok ve kupon hakkı
  *                          geri verilir. `stockReserved` bayrağı sayesinde
  *                          iki kez uygulanmaz.
@@ -86,6 +87,23 @@ export type CustomerInfo = {
   billingPostalCode?: string | null;
 };
 
+/** Kupon kullanımının kime yazılacağını belirler (küçük harfe normalize). */
+async function resolveRedemptionEmail(
+  tx: Prisma.TransactionClient,
+  userId: string | null,
+  formEmail: string
+): Promise<string> {
+  if (userId) {
+    const user = await tx.user.findUnique({
+      where: { id: userId },
+      select: { email: true },
+    });
+    if (user?.email) return user.email.trim().toLowerCase();
+  }
+
+  return formEmail.trim().toLowerCase();
+}
+
 export type CreateOrderInput = {
   items: CartLineInput[];
   couponCode?: string | null;
@@ -100,6 +118,14 @@ export type CreatedOrder = {
   accessToken: string;
   totalKurus: number;
   paymentMethod: string;
+  /** Fiyatlandırılmış satırlar — ödeme sağlayıcısının sepet alanı için. */
+  lines: {
+    name: string;
+    variantLabel: string | null;
+    quantity: number;
+    unitPriceKurus: number;
+    lineTotalKurus: number;
+  }[];
 };
 
 /**
@@ -157,10 +183,14 @@ export async function createOrder(input: CreateOrderInput): Promise<CreatedOrder
       }
 
       // 3) Kupon kullanım hakkı rezervasyonu — yarış koşuluna karşı koşullu.
+      //    Kişi başı limit için kullanım sırası (useIndex) burada hesaplanır,
+      //    satır ise sipariş yazıldıktan sonra (adım 5) eklenir.
+      let redemption: { email: string; useIndex: number } | null = null;
+
       if (priced.coupon) {
         const couponRecord = await tx.coupon.findUnique({
           where: { id: priced.coupon.id },
-          select: { maxUses: true },
+          select: { maxUses: true, maxUsesPerUser: true },
         });
 
         const where: Prisma.CouponWhereInput = {
@@ -183,6 +213,34 @@ export async function createOrder(input: CreateOrderInput): Promise<CreatedOrder
             "Kupon kullanım hakkı az önce doldu. Lütfen kuponu kaldırıp tekrar deneyin."
           );
         }
+
+        // Kimlik olarak üyenin HESAP e-postası kullanılır; formdaki e-posta
+        // değiştirilerek limit aşılamasın. Misafirde tek tanımlayıcı form
+        // e-postasıdır.
+        const redemptionEmail = await resolveRedemptionEmail(
+          tx,
+          input.userId ?? null,
+          input.customer.email
+        );
+
+        const usedByCustomer = await tx.couponRedemption.count({
+          where: { couponId: priced.coupon.id, email: redemptionEmail },
+        });
+
+        if (
+          couponRecord?.maxUsesPerUser !== null &&
+          couponRecord?.maxUsesPerUser !== undefined &&
+          usedByCustomer >= couponRecord.maxUsesPerUser
+        ) {
+          throw new CheckoutError(
+            "COUPON_USER_LIMIT",
+            couponRecord.maxUsesPerUser === 1
+              ? "Bu kuponu daha önce kullandınız. Her müşteri yalnızca bir kez kullanabilir."
+              : `Bu kuponu en fazla ${couponRecord.maxUsesPerUser} kez kullanabilirsiniz.`
+          );
+        }
+
+        redemption = { email: redemptionEmail, useIndex: usedByCustomer };
       }
 
       // 4) Siparişi yaz. Tüm tutarlar sunucunun hesapladığı değerlerdir.
@@ -271,6 +329,22 @@ export async function createOrder(input: CreateOrderInput): Promise<CreatedOrder
         throw lastError ?? new CheckoutError("ORDER_FAILED", "Sipariş oluşturulamadı.");
       }
 
+      // 5) Kupon kullanım satırı. `(couponId, email, useIndex)` benzersiz
+      //    olduğu için, aynı anda giden iki sipariş aynı sırayı alamaz:
+      //    ikincisi unique ihlaliyle TÜM işlemi geri alır (stok da iade olur).
+      //    Bu hata dışarıda okunabilir bir mesaja çevrilir.
+      if (priced.coupon && redemption) {
+        await tx.couponRedemption.create({
+          data: {
+            couponId: priced.coupon.id,
+            userId: input.userId ?? null,
+            email: redemption.email,
+            orderId: created.id,
+            useIndex: redemption.useIndex,
+          },
+        });
+      }
+
       return {
         id: created.id,
         orderNumber: created.orderNumber,
@@ -281,7 +355,23 @@ export async function createOrder(input: CreateOrderInput): Promise<CreatedOrder
       };
     },
     { timeout: 20_000 }
-  );
+  ).catch((error) => {
+    // Kişi başı kupon limitinde yarış: iki eşzamanlı sipariş aynı `useIndex`
+    // değerini almaya çalıştı. İşlemin tamamı geri alındı (stok da iade
+    // edildi); kullanıcıya teknik hata yerine anlaşılır bir mesaj döneriz.
+    if (
+      (error as { code?: string })?.code === "P2002" &&
+      String((error as { meta?: { target?: unknown } })?.meta?.target ?? "").includes(
+        "coupon_redemptions"
+      )
+    ) {
+      throw new CheckoutError(
+        "COUPON_USER_LIMIT",
+        "Bu kuponun size tanımlı kullanım hakkı doldu. Lütfen kuponu kaldırıp tekrar deneyin."
+      );
+    }
+    throw error;
+  });
 
   // Havale/EFT siparişinde ödeme henüz yok; müşteriye banka bilgilerini
   // içeren bir "sipariş alındı" e-postası gönderilir. Kart siparişinde
@@ -361,6 +451,10 @@ export async function releaseOrderReservation(orderId: string): Promise<boolean>
         where: { id: order.couponId, usedCount: { gt: 0 } },
         data: { usedCount: { decrement: 1 } },
       });
+
+      // Kişi başı kullanım hakkı da geri verilir: iptal edilen bir sipariş
+      // müşterinin kuponu bir daha kullanmasını engellememelidir.
+      await tx.couponRedemption.deleteMany({ where: { orderId } });
     }
 
     return true;
@@ -376,21 +470,22 @@ export type MarkPaidResult =
 /**
  * Siparişi ödendi olarak işaretler.
  *
- * ÖNEMLİ: Bu fonksiyon YALNIZCA Stripe'tan doğrulanmış veriyle çağrılmalıdır
- * (imzası doğrulanmış webhook olayı veya sunucudan yapılan PaymentIntent
- * sorgusu). İstemcinin "ödeme başarılı" demesi asla yeterli değildir.
+ * ÖNEMLİ: Bu fonksiyon YALNIZCA PayTR'den doğrulanmış veriyle çağrılmalıdır
+ * (imzası doğrulanmış bildirim veya sunucudan yapılan durum sorgusu).
+ * İstemcinin "ödeme başarılı" demesi asla yeterli değildir.
  *
- * Tutar ve para birimi burada BİR KEZ DAHA doğrulanır: PaymentIntent tutarı
- * siparişin veritabanındaki toplamıyla birebir eşleşmiyorsa sipariş ödenmiş
- * sayılmaz ve inceleme için işaretlenir.
+ * Tutar burada BİR KEZ DAHA doğrulanır: tahsil edilen tutar siparişin
+ * veritabanındaki toplamıyla birebir eşleşmiyorsa sipariş ödenmiş sayılmaz ve
+ * inceleme için işaretlenir. Taksit kapalı olduğu için (no_installment=1)
+ * tahsil edilen tutar sipariş toplamına eşit olmak zorundadır.
  */
 export async function markOrderPaid(params: {
   orderId: string;
-  paymentIntentId: string;
+  /** PayTR merchant_oid — siparişe kayıtlı referansla eşleşmelidir. */
+  paymentRef: string;
   amountReceivedKurus: number;
-  currency: string;
 }): Promise<MarkPaidResult> {
-  const { orderId, paymentIntentId, amountReceivedKurus, currency } = params;
+  const { orderId, paymentRef, amountReceivedKurus } = params;
 
   const order = await prisma.order.findUnique({ where: { id: orderId } });
   if (!order) return { status: "not_found" };
@@ -399,49 +494,74 @@ export async function markOrderPaid(params: {
 
   const expectedKurus = toKurus(order.total);
 
-  if (currency.toLowerCase() !== "try") {
-    const reason = `Para birimi uyuşmuyor: beklenen TRY, gelen ${currency.toUpperCase()}`;
-    await flagOrderForReview(orderId, reason);
-    return { status: "mismatch", reason };
-  }
-
   if (amountReceivedKurus !== expectedKurus) {
     const reason = `Tutar uyuşmuyor: beklenen ${expectedKurus} kuruş, tahsil edilen ${amountReceivedKurus} kuruş`;
     await flagOrderForReview(orderId, reason);
     return { status: "mismatch", reason };
   }
 
-  if (order.stripePaymentId && order.stripePaymentId !== paymentIntentId) {
-    const reason = `PaymentIntent eşleşmiyor: siparişe kayıtlı ${order.stripePaymentId}, gelen ${paymentIntentId}`;
+  if (order.paymentRef && order.paymentRef !== paymentRef) {
+    const reason = `Ödeme referansı eşleşmiyor: siparişe kayıtlı ${order.paymentRef}, gelen ${paymentRef}`;
     await flagOrderForReview(orderId, reason);
     return { status: "mismatch", reason };
   }
 
-  // Koşullu güncelleme: eşzamanlı iki webhook gelirse yalnızca biri uygular.
+  // Koşullu güncelleme: eşzamanlı iki bildirim gelirse yalnızca biri uygular.
   const updated = await prisma.order.updateMany({
     where: { id: orderId, paymentStatus: "UNPAID" },
     data: {
       paymentStatus: "PAID",
       status: "PROCESSING",
       paidAt: new Date(),
-      stripePaymentId: paymentIntentId,
+      paymentRef,
     },
   });
 
   if (updated.count !== 1) return { status: "already_paid" };
 
   // `updated.count === 1` yalnızca BU çağrının durumu değiştirdiği anlamına
-  // gelir; bu sayede ödeme onayı e-postası tam olarak bir kez gönderilir
-  // (eşzamanlı webhook tekrarlarında ikinci çağrı buraya hiç ulaşmaz).
-  await sendPaidConfirmationEmail(orderId).catch((error) =>
-    console.error("[markOrderPaid] e-posta gönderilemedi:", error)
-  );
+  // gelir; bu sayede fatura ve onay e-postası tam olarak bir kez üretilir
+  // (PayTR bildirimi tekrarlarsa ikinci çağrı buraya hiç ulaşmaz).
+  await finalizePaidOrder(orderId);
 
   return { status: "paid" };
 }
 
-/** Ödeme onayı e-postasını gönderir. Kart (webhook) ve havale (admin onayı) akışlarının ortak noktası. */
-export async function sendPaidConfirmationEmail(orderId: string) {
+/**
+ * Ödeme onaylandıktan SONRA yapılacak işler: fatura üretimi ve müşteriye
+ * faturası ekli onay e-postası.
+ *
+ * Kart (PayTR bildirimi) ve havale (admin onayı) akışlarının ortak noktasıdır;
+ * böylece ödeme yönteminden bağımsız olarak HER ödenmiş siparişin faturası
+ * oluşur.
+ *
+ * Hiçbir adımı kritik değildir: fatura veya e-posta başarısız olsa bile
+ * sipariş ödenmiş kalır (hata loglanır, istisna dışarı sızmaz).
+ */
+export async function finalizePaidOrder(orderId: string): Promise<void> {
+  let invoice: Awaited<ReturnType<typeof ensureInvoice>> = null;
+
+  try {
+    invoice = await ensureInvoice(orderId);
+    if (invoice?.created) {
+      console.info(`[orders] Sipariş ${orderId} için fatura üretildi: ${invoice.invoiceNumber}`);
+    }
+  } catch (error) {
+    console.error(`[orders] fatura oluşturulamadı (${orderId}):`, error);
+  }
+
+  await sendPaidConfirmationEmail(orderId, invoice).catch((error) =>
+    console.error(`[orders] ödeme onayı e-postası gönderilemedi (${orderId}):`, error)
+  );
+}
+
+/**
+ * Ödeme onayı e-postasını gönderir. Fatura verilirse PDF ek olarak iliştirilir.
+ */
+export async function sendPaidConfirmationEmail(
+  orderId: string,
+  invoice?: { invoiceNumber: string; filePath: string } | null
+) {
   const order = await prisma.order.findUnique({
     where: { id: orderId },
     include: { items: true, user: { select: { email: true, name: true } } },
@@ -451,6 +571,18 @@ export async function sendPaidConfirmationEmail(orderId: string) {
 
   const recipient = order.user?.email ?? order.guestEmail;
   if (!recipient) return;
+
+  // Fatura okunamazsa e-posta yine gider — yalnızca eksiz.
+  let attachments: EmailAttachment[] | undefined;
+
+  if (invoice?.filePath) {
+    const content = await readInvoiceFile(invoice.filePath).catch(() => null);
+    if (content) {
+      attachments = [{ filename: `fatura-${invoice.invoiceNumber}.pdf`, content }];
+    } else {
+      console.error(`[orders] fatura dosyası okunamadı: ${invoice.filePath}`);
+    }
+  }
 
   await sendEmail({
     to: recipient,
@@ -466,7 +598,9 @@ export async function sendPaidConfirmationEmail(orderId: string) {
         quantity: item.quantity,
         totalLabel: formatPrice(Number(item.totalPrice)),
       })),
+      invoiceAttached: Boolean(attachments),
     }),
+    attachments,
   });
 }
 
@@ -569,7 +703,7 @@ export async function sendShippedEmail(orderId: string) {
   await sendOrderStatusEmail(orderId, "shipped");
 }
 
-/** İade bildirimini gönderir (admin elle veya Stripe webhook'u üzerinden). */
+/** İade bildirimini gönderir (admin paneli veya PayTR iade akışı üzerinden). */
 export async function sendRefundedEmail(orderId: string) {
   await sendOrderStatusEmail(orderId, "refunded");
 }

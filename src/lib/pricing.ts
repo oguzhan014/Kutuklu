@@ -157,7 +157,8 @@ function normalizeLines(
 async function resolveCoupon(
   client: DbClient,
   couponCode: string | null | undefined,
-  subtotalKurus: number
+  subtotalKurus: number,
+  buyerEmail: string | null
 ): Promise<{ coupon: AppliedCoupon | null; discountKurus: number; error: string | null }> {
   const code = couponCode?.trim().toUpperCase();
   if (!code) return { coupon: null, discountKurus: 0, error: null };
@@ -182,6 +183,27 @@ async function resolveCoupon(
       discountKurus: 0,
       error: "Bu kuponun kullanım hakkı dolmuş.",
     };
+  }
+
+  // Kişi başı limit. Burada YALNIZCA bilgilendirme amaçlı bakılır; gerçek
+  // koruma sipariş anında, transaction içinde ve benzersiz kısıtla uygulanır
+  // (bkz. createOrder). Alıcı kimliği bilinmiyorsa (misafir, e-postasını
+  // henüz yazmamış) bu kontrol atlanır.
+  if (coupon.maxUsesPerUser !== null && buyerEmail) {
+    const usedByCustomer = await client.couponRedemption.count({
+      where: { couponId: coupon.id, email: buyerEmail.trim().toLowerCase() },
+    });
+
+    if (usedByCustomer >= coupon.maxUsesPerUser) {
+      return {
+        coupon: null,
+        discountKurus: 0,
+        error:
+          coupon.maxUsesPerUser === 1
+            ? "Bu kuponu daha önce kullandınız."
+            : `Bu kuponu en fazla ${coupon.maxUsesPerUser} kez kullanabilirsiniz.`,
+      };
+    }
   }
 
   const minOrderKurus = coupon.minOrderAmount ? toKurus(coupon.minOrderAmount) : 0;
@@ -233,6 +255,8 @@ export async function priceCart(
     client?: DbClient;
     checkStock?: boolean;
     settings?: Settings;
+    /** Kişi başı kupon limitini önizlemede gösterebilmek için alıcı kimliği. */
+    buyerEmail?: string | null;
   } = {}
 ): Promise<PricedCart> {
   const client = options.client ?? prisma;
@@ -341,7 +365,12 @@ export async function priceCart(
     coupon,
     discountKurus,
     error: couponError,
-  } = await resolveCoupon(client, options.couponCode, subtotalKurus);
+  } = await resolveCoupon(
+    client,
+    options.couponCode,
+    subtotalKurus,
+    options.buyerEmail ?? null
+  );
 
   const discountedSubtotal = subtotalKurus - discountKurus;
 

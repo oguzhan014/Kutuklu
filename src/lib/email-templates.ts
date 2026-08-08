@@ -115,7 +115,14 @@ export function orderPendingTransferEmail(data: OrderEmailData & { bankName: str
 }
 
 /** Ödeme onaylandı — kart veya havale onayı sonrası. */
-export function orderPaidEmail(data: OrderEmailData) {
+export function orderPaidEmail(data: OrderEmailData & { invoiceAttached?: boolean }) {
+  const invoiceNote = data.invoiceAttached
+    ? `<p style="font-size:0.88rem;color:${BRAND.grayText};line-height:1.7;margin-top:14px;">
+         Siparişinizin <strong>faturası bu e-postaya PDF olarak eklenmiştir</strong>.
+         Faturaya dilediğiniz zaman sipariş sayfanızdan da ulaşabilirsiniz.
+       </p>`
+    : "";
+
   const body = `
     <h1 style="font-size:1.3rem;color:${BRAND.black};margin:0 0 12px;">Ödemeniz Onaylandı ✓</h1>
     <p style="font-size:0.92rem;color:${BRAND.grayText};line-height:1.7;">
@@ -130,6 +137,8 @@ export function orderPaidEmail(data: OrderEmailData) {
     <p style="font-size:0.95rem;color:${BRAND.black};font-weight:700;text-align:right;margin-top:12px;">
       Toplam: ${escapeHtml(data.totalLabel)}
     </p>
+
+    ${invoiceNote}
 
     ${button("Siparişimi Görüntüle", data.orderUrl)}
   `;
@@ -201,4 +210,26 @@ export function passwordResetEmail(data: { name: string; resetUrl: string; siteU
     </p>
   `;
   return wrapper("Şifre Sıfırlama", body, data.siteUrl);
+}
+
+/** E-posta adresi doğrulama bağlantısı. */
+export function emailVerificationEmail(data: {
+  customerName: string;
+  verifyUrl: string;
+  siteUrl: string;
+}) {
+  const body = `
+    <h1 style="font-size:1.3rem;color:${BRAND.black};margin:0 0 12px;">E-posta Adresinizi Doğrulayın</h1>
+    <p style="font-size:0.92rem;color:${BRAND.grayText};line-height:1.7;">
+      Merhaba ${escapeHtml(data.customerName)}, aşağıdaki bağlantıya tıklayarak e-posta
+      adresinizi doğrulayabilirsiniz. Böylece sipariş onaylarınızın ve faturalarınızın
+      size ulaşacağından emin oluruz. Bu bağlantı <strong>24 saat</strong> geçerlidir.
+    </p>
+    ${button("E-postamı Doğrula", data.verifyUrl)}
+    <p style="font-size:0.8rem;color:#8A8070;margin-top:20px;line-height:1.6;">
+      Bu talebi siz yapmadıysanız bu e-postayı yok sayabilirsiniz; hesabınızda herhangi bir
+      değişiklik yapılmayacaktır.
+    </p>
+  `;
+  return wrapper("E-posta Doğrulama", body, data.siteUrl);
 }

@@ -3,7 +3,7 @@
  *
  * Kural: Tüm hesaplamalar TAM SAYI KURUŞ üzerinden yapılır.
  * Ondalıklı float aritmetiği (0.1 + 0.2 !== 0.3) sipariş toplamlarında
- * kuruş kaymalarına ve Stripe tutarı ile DB tutarının uyuşmamasına yol açar.
+ * kuruş kaymalarına ve PayTR tutarı ile DB tutarının uyuşmamasına yol açar.
  */
 
 /** Prisma Decimal / string / number değerini tam sayı kuruşa çevirir. */

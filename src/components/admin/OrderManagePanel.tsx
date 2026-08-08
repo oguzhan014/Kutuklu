@@ -157,8 +157,9 @@ export function OrderManagePanel({
             lineHeight: 1.6,
           }}
         >
-          Kart ödemelerinin durumu Stripe tarafından doğrulanır ve panelden elle
-          değiştirilemez.
+          Kart ödemelerinin durumu PayTR tarafından doğrulanır ve panelden elle
+          &quot;ödendi&quot; yapılamaz. Durumu &quot;İade Edildi&quot; olarak
+          değiştirdiğinizde para PayTR üzerinden otomatik iade edilir.
         </div>
       )}
 

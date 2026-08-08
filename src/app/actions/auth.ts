@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { limitByIp } from "@/lib/rate-limit";
 import { registerSchema, orderLookupSchema } from "@/lib/account-schema";
+import { sendVerificationEmail } from "@/lib/email-verification";
 
 /**
  * Kayıt ve misafir sipariş sorgulama eylemleri.
@@ -65,7 +66,7 @@ export async function registerCustomer(rawInput: unknown): Promise<ActionResult>
   const passwordHash = await bcrypt.hash(password, 12);
 
   try {
-    await prisma.user.create({
+    const created = await prisma.user.create({
       data: {
         name,
         email,
@@ -74,7 +75,15 @@ export async function registerCustomer(rawInput: unknown): Promise<ActionResult>
         // Rol sabit: istemci bunu etkileyemez.
         role: "CUSTOMER",
       },
+      select: { id: true },
     });
+
+    // Doğrulama bağlantısı gönderilir ama kayıt BUNA BAĞLI DEĞİLDİR:
+    // e-posta gitmese bile kullanıcı giriş yapıp alışveriş yapabilir
+    // (yumuşak doğrulama). Doğrulama ödeme adımında hatırlatılır.
+    void sendVerificationEmail(created.id).catch((error) =>
+      console.error("[registerCustomer] doğrulama e-postası gönderilemedi:", error)
+    );
   } catch (error) {
     // Eşzamanlı iki kayıt denemesinde unique ihlali oluşabilir.
     if ((error as { code?: string })?.code === "P2002") {

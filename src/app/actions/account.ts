@@ -8,8 +8,10 @@ import { limitByIp } from "@/lib/rate-limit";
 import {
   addressSchema,
   changePasswordSchema,
+  deleteAccountSchema,
   profileSchema,
 } from "@/lib/account-schema";
+import { anonymizeUserAccount } from "@/lib/account-deletion";
 
 /**
  * Hesap yönetimi eylemleri.
@@ -119,6 +121,85 @@ export async function changePassword(rawInput: unknown): Promise<ActionResult> {
     return { ok: true };
   } catch (error) {
     return handleError(error, "Şifre değiştirilemedi.");
+  }
+}
+
+export type DeleteAccountResult =
+  | { ok: true; retainedOrders: number }
+  | { ok: false; error: string; fieldErrors?: Record<string, string> };
+
+/**
+ * Hesabı siler (anonimleştirir).
+ *
+ * Geri dönüşü olmadığı için iki koşul aranır:
+ *   1. Mevcut şifre doğru girilmeli (oturum çalınmışsa hesap silinemesin)
+ *   2. Kullanıcı "HESABIMI SIL" ifadesini yazarak niyetini teyit etmeli
+ *
+ * Siparişler ve faturalar yasal saklama yükümlülüğü nedeniyle korunur;
+ * kaç siparişin saklandığı kullanıcıya bildirilir.
+ */
+export async function deleteAccount(rawInput: unknown): Promise<DeleteAccountResult> {
+  try {
+    const user = await requireUser();
+
+    const limit = await limitByIp("delete-account", 5, 60 * 60_000);
+    if (!limit.ok) {
+      return { ok: false, error: "Çok fazla deneme yapıldı. Lütfen sonra tekrar deneyin." };
+    }
+
+    const parsed = deleteAccountSchema.safeParse(rawInput);
+    if (!parsed.success) {
+      return {
+        ok: false,
+        error: "Lütfen formdaki hataları düzeltin.",
+        fieldErrors: collectFieldErrors(parsed.error.issues),
+      };
+    }
+
+    const record = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { password: true, role: true },
+    });
+
+    if (!record?.password) {
+      return { ok: false, error: "Bu hesap için şifre tanımlı değil." };
+    }
+
+    // Yöneticinin kendi hesabını silmesi mağazayı sahipsiz bırakabilir.
+    if (record.role === "ADMIN") {
+      return {
+        ok: false,
+        error: "Yönetici hesapları bu ekrandan silinemez.",
+      };
+    }
+
+    const isPasswordCorrect = await bcrypt.compare(parsed.data.password, record.password);
+
+    if (!isPasswordCorrect) {
+      return {
+        ok: false,
+        error: "Şifreniz hatalı.",
+        fieldErrors: { password: "Şifreniz hatalı" },
+      };
+    }
+
+    const result = await anonymizeUserAccount(user.id);
+
+    if (!result.ok) {
+      return {
+        ok: false,
+        error:
+          result.reason === "already_deleted"
+            ? "Bu hesap zaten silinmiş."
+            : "Hesap bulunamadı.",
+      };
+    }
+
+    return { ok: true, retainedOrders: result.retainedOrders };
+  } catch (error) {
+    if (error instanceof AuthError) return { ok: false, error: error.message };
+    console.error("Hesap silinemedi.", error);
+    return { ok: false, error: "Hesap silinemedi." };
   }
 }
 

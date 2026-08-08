@@ -6,11 +6,13 @@ import { requireAdmin, AuthError } from "@/lib/auth-guards";
 import {
   cancelOrder,
   releaseOrderReservation,
-  sendPaidConfirmationEmail,
+  finalizePaidOrder,
   sendShippedEmail,
   sendRefundedEmail,
 } from "@/lib/orders";
 import { updateSettings, type SettingKey } from "@/lib/settings";
+import { refundPayment } from "@/lib/paytr";
+import { toKurus } from "@/lib/money";
 import { couponSchema, orderStatusSchema, trackingSchema } from "@/lib/product-schema";
 
 /**
@@ -55,7 +57,16 @@ export async function updateOrderStatus(rawInput: unknown): Promise<AdminResult>
 
     const order = await prisma.order.findUnique({
       where: { id: orderId },
-      select: { id: true, status: true, orderNumber: true },
+      select: {
+        id: true,
+        status: true,
+        orderNumber: true,
+        total: true,
+        paymentMethod: true,
+        paymentStatus: true,
+        paymentRef: true,
+        adminNote: true,
+      },
     });
 
     if (!order) return { ok: false, error: "Sipariş bulunamadı." };
@@ -66,11 +77,41 @@ export async function updateOrderStatus(rawInput: unknown): Promise<AdminResult>
       // ödendi) iptal de kendisine bildirilir.
       await cancelOrder(orderId, "Yönetici tarafından iptal edildi.", true);
     } else if (status === "REFUNDED") {
+      // Kart ödemesinde para GERÇEKTEN iade edilmeden sipariş "iade edildi"
+      // yazılmaz: aksi hâlde panel, müşterinin parası hâlâ bizdeyken iade
+      // görünürdü. PayTR reddederse durum değişmez ve hata gösterilir.
+      const needsProviderRefund =
+        order.paymentMethod === "card" &&
+        order.paymentStatus === "PAID" &&
+        Boolean(order.paymentRef);
+
+      if (needsProviderRefund) {
+        const refund = await refundPayment(order.paymentRef!, toKurus(order.total));
+
+        if (!refund.ok) {
+          return {
+            ok: false,
+            error: `PayTR iadesi başarısız: ${refund.error} Sipariş durumu değiştirilmedi.`,
+          };
+        }
+      }
+
       await releaseOrderReservation(orderId);
+
+      const stamp = new Date().toISOString();
+      const note = needsProviderRefund
+        ? `[${stamp}] PayTR üzerinden iade edildi.`
+        : `[${stamp}] İade elle işaretlendi (havale/EFT — para iadesi bankadan yapılmalıdır).`;
+
       await prisma.order.update({
         where: { id: orderId },
-        data: { status, paymentStatus: "REFUNDED" },
+        data: {
+          status,
+          paymentStatus: "REFUNDED",
+          adminNote: `${order.adminNote ? `${order.adminNote}\n` : ""}${note}`,
+        },
       });
+
       await sendRefundedEmail(orderId).catch((error) =>
         console.error("[updateOrderStatus] iade e-postası gönderilemedi:", error)
       );
@@ -147,8 +188,8 @@ export async function updateOrderTracking(rawInput: unknown): Promise<AdminResul
  * Havale/EFT ile gelen ödemeyi elle onaylar.
  *
  * Yalnızca `transfer` yöntemli siparişler için kullanılabilir. Kart
- * ödemeleri ASLA elle "ödendi" yapılamaz — onların tek kaynağı Stripe'ın
- * imzalı webhook'udur. Bu ayrım, panele erişen birinin kart ödemesini
+ * ödemeleri ASLA elle "ödendi" yapılamaz — onların tek kaynağı PayTR'nin
+ * imzalı bildirimidir. Bu ayrım, panele erişen birinin kart ödemesini
  * doğrulamadan onaylamasını engeller.
  */
 export async function markTransferPaid(orderId: string): Promise<AdminResult> {
@@ -166,7 +207,7 @@ export async function markTransferPaid(orderId: string): Promise<AdminResult> {
       return {
         ok: false,
         error:
-          "Yalnızca havale/EFT siparişleri elle onaylanabilir. Kart ödemeleri Stripe tarafından doğrulanır.",
+          "Yalnızca havale/EFT siparişleri elle onaylanabilir. Kart ödemeleri PayTR tarafından doğrulanır.",
       };
     }
 
@@ -186,12 +227,10 @@ export async function markTransferPaid(orderId: string): Promise<AdminResult> {
       },
     });
 
-    // Yalnızca bu istek durumu gerçekten değiştirdiyse e-posta gönder
-    // (eşzamanlı çift tıklamada mükerrer mail gitmesin).
+    // Yalnızca bu istek durumu gerçekten değiştirdiyse faturayı üret ve
+    // e-postayı gönder (eşzamanlı çift tıklamada mükerrer mail gitmesin).
     if (updated.count === 1) {
-      await sendPaidConfirmationEmail(orderId).catch((error) =>
-        console.error("[markTransferPaid] e-posta gönderilemedi:", error)
-      );
+      await finalizePaidOrder(orderId);
     }
 
     revalidatePath("/admin/orders");
@@ -317,6 +356,7 @@ export async function saveCoupon(rawInput: unknown): Promise<AdminResult> {
           ? String(data.minOrderAmount)
           : null,
       maxUses: data.maxUses,
+      maxUsesPerUser: data.maxUsesPerUser,
       isActive: data.isActive,
       expiresAt,
     };

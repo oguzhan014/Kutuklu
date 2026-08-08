@@ -2,7 +2,7 @@ import "server-only";
 import { createHash, timingSafeEqual } from "node:crypto";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { getStripe, isStripeConfigured } from "@/lib/stripe";
+import { isPayTRConfigured, queryPaymentStatus } from "@/lib/paytr";
 import { markOrderPaid } from "@/lib/orders";
 
 /**
@@ -77,42 +77,39 @@ export async function getOrderForViewer(
 }
 
 /**
- * Ödeme durumunu Stripe ile karşılaştırıp gerekirse günceller.
+ * Ödeme durumunu PayTR'ye sorup gerekirse günceller.
  *
- * Webhook birincil yoldur; bu fonksiyon yalnızca yedektir (ör. yerel
- * geliştirmede `stripe listen` çalışmıyorsa veya webhook gecikmişse).
+ * PayTR bildirimi (callback) birincil yoldur; bu fonksiyon yalnızca yedektir
+ * (ör. bildirim gecikmişse veya yerel geliştirmede sunucuya ulaşamıyorsa).
  *
- * GÜVENLİ: Ödeme bilgisi istemciden değil, sunucudan Stripe API'sine yapılan
+ * GÜVENLİ: Ödeme bilgisi istemciden değil, sunucudan PayTR API'sine yapılan
  * sorgudan alınır ve tutar doğrulaması `markOrderPaid` içinde yine yapılır.
  */
 export async function reconcileOrderPayment(order: {
   id: string;
   paymentStatus: string;
   paymentMethod: string | null;
-  stripePaymentId: string | null;
+  paymentRef: string | null;
 }): Promise<boolean> {
   if (order.paymentStatus === "PAID") return false;
   if (order.paymentMethod !== "card") return false;
-  if (!order.stripePaymentId) return false;
-  if (!isStripeConfigured()) return false;
+  if (!order.paymentRef) return false;
+  if (!isPayTRConfigured()) return false;
 
   try {
-    const paymentIntent = await getStripe().paymentIntents.retrieve(
-      order.stripePaymentId
-    );
+    const status = await queryPaymentStatus(order.paymentRef);
 
-    if (paymentIntent.status !== "succeeded") return false;
+    if (status.state !== "paid") return false;
 
     const result = await markOrderPaid({
       orderId: order.id,
-      paymentIntentId: paymentIntent.id,
-      amountReceivedKurus: paymentIntent.amount_received || paymentIntent.amount,
-      currency: paymentIntent.currency,
+      paymentRef: order.paymentRef,
+      amountReceivedKurus: status.totalAmountKurus,
     });
 
     return result.status === "paid";
   } catch (error) {
-    console.error("[reconcileOrderPayment] Stripe sorgusu başarısız:", error);
+    console.error("[reconcileOrderPayment] PayTR sorgusu başarısız:", error);
     return false;
   }
 }

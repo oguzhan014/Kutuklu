@@ -2,14 +2,18 @@
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { limitByIp } from "@/lib/rate-limit";
+import { limitByIp, getClientIp } from "@/lib/rate-limit";
 import { CheckoutError, priceCart, type CartLineInput } from "@/lib/pricing";
 import {
   createOrder,
   releaseOrderReservation,
   releaseStaleReservations,
 } from "@/lib/orders";
-import { getStripe, isStripeConfigured, STRIPE_CURRENCY } from "@/lib/stripe";
+import {
+  createPaymentToken,
+  generateMerchantOid,
+  isPayTRConfigured,
+} from "@/lib/paytr";
 import { getSettings, settingBool } from "@/lib/settings";
 import { checkoutSchemaWithBilling } from "@/lib/checkout-schema";
 import { isValidIl } from "@/lib/turkiye-iller";
@@ -24,6 +28,8 @@ import { kurusToNumber } from "@/lib/money";
  * arayüzde ne olduğu varsayılmaz: her çağrıda girdi yeniden doğrulanır,
  * fiyat yeniden hesaplanır, hız sınırı uygulanır.
  */
+
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
 
 export type CartSummary = {
   ok: true;
@@ -70,8 +76,17 @@ export async function getCartSummary(
   }
 
   try {
+    // Kişi başı kupon limiti uyarısını erken gösterebilmek için oturum
+    // sahibinin e-postası kullanılır. Misafirde kimlik henüz bilinmediğinden
+    // uyarı sipariş anında çıkar (asıl koruma zaten orada).
+    const session = await auth();
+
     // Önizlemede stok hatası fırlatmıyoruz; kalan stok satır bazında gösterilir.
-    const priced = await priceCart(items, { couponCode, checkStock: false });
+    const priced = await priceCart(items, {
+      couponCode,
+      checkStock: false,
+      buyerEmail: session?.user?.email ?? null,
+    });
 
     return {
       ok: true,
@@ -121,8 +136,8 @@ export type PlaceOrderResult =
       orderNumber: string;
       accessToken: string;
       paymentMethod: "card" | "transfer";
-      /** Kart ödemesinde Stripe PaymentElement için gerekli anahtar. */
-      clientSecret: string | null;
+      /** Kart ödemesinde PayTR güvenli ödeme iframe'inin adresi. */
+      paymentIframeUrl: string | null;
       total: number;
     }
   | { ok: false; error: string; code: string; fieldErrors?: Record<string, string> };
@@ -135,8 +150,8 @@ export type PlaceOrderResult =
  *  2. Zod ile katı girdi doğrulaması
  *  3. Fiyat/kargo/indirim SUNUCUDA veritabanından hesaplanır
  *  4. Stok ve kupon atomik rezerve edilir
- *  5. Stripe PaymentIntent tutarı sunucunun hesabından üretilir
- *  6. Ödeme "başarılı" bilgisi asla istemciden kabul edilmez (bkz. webhook)
+ *  5. PayTR ödeme tutarı sunucunun hesabından üretilir ve imzalanır
+ *  6. Ödeme "başarılı" bilgisi asla istemciden kabul edilmez (bkz. bildirim)
  */
 export async function placeOrder(rawInput: unknown): Promise<PlaceOrderResult> {
   const limit = await limitByIp("place-order", 10, 60_000);
@@ -186,10 +201,10 @@ export async function placeOrder(rawInput: unknown): Promise<PlaceOrderResult> {
         error: "Kredi kartı ile ödeme şu anda kullanılamıyor.",
       };
     }
-    if (!isStripeConfigured()) {
+    if (!isPayTRConfigured()) {
       return {
         ok: false,
-        code: "STRIPE_NOT_CONFIGURED",
+        code: "PAYTR_NOT_CONFIGURED",
         error:
           "Kredi kartı ödemesi henüz etkin değil. Lütfen Havale/EFT ile devam edin.",
       };
@@ -260,39 +275,46 @@ export async function placeOrder(rawInput: unknown): Promise<PlaceOrderResult> {
       orderNumber: created.orderNumber,
       accessToken: created.accessToken,
       paymentMethod: "transfer",
-      clientSecret: null,
+      paymentIframeUrl: null,
       total: kurusToNumber(created.totalKurus),
     };
   }
 
-  // Kart: PaymentIntent tutarı SUNUCUNUN hesapladığı toplamdan üretilir.
+  // Kart: PayTR'ye gönderilen tutar SUNUCUNUN hesapladığı toplamdır ve
+  // merchant_key ile imzalanır; yolda değiştirilirse PayTR reddeder.
   try {
-    const stripe = getStripe();
+    const merchantOid = generateMerchantOid(created.orderNumber);
 
-    const paymentIntent = await stripe.paymentIntents.create(
-      {
-        amount: created.totalKurus,
-        currency: STRIPE_CURRENCY,
-        automatic_payment_methods: { enabled: true },
-        metadata: {
-          orderId: created.id,
-          orderNumber: created.orderNumber,
-        },
-        description: `Kütüklü Zeytinyağı sipariş ${created.orderNumber}`,
-        receipt_email: data.email,
-      },
-      // Aynı sipariş için ağ hatası sonucu ikinci bir PaymentIntent
-      // oluşmasını engeller.
-      { idempotencyKey: `order_${created.id}` }
-    );
-
+    // Referans önce yazılır: PayTR bildirimi token yanıtından ÖNCE gelse bile
+    // siparişi bulabilelim.
     await prisma.order.update({
       where: { id: created.id },
-      data: { stripePaymentId: paymentIntent.id },
+      data: { paymentRef: merchantOid },
     });
 
-    if (!paymentIntent.client_secret) {
-      throw new Error("Stripe client_secret döndürmedi.");
+    const orderUrl = `${SITE_URL}/siparis/${created.orderNumber}?token=${encodeURIComponent(
+      created.accessToken
+    )}`;
+
+    const token = await createPaymentToken({
+      merchantOid,
+      amountKurus: created.totalKurus,
+      email: data.email,
+      userName: `${data.firstName} ${data.lastName}`.trim(),
+      userPhone: data.phone,
+      userAddress: `${data.address} ${data.district} ${data.city}`.trim(),
+      userIp: await getClientIp(),
+      basket: created.lines.map((line) => ({
+        name: line.variantLabel ? `${line.name} (${line.variantLabel})` : line.name,
+        unitPriceKurus: line.unitPriceKurus,
+        quantity: line.quantity,
+      })),
+      okUrl: orderUrl,
+      failUrl: orderUrl,
+    });
+
+    if (!token.ok) {
+      throw new Error(token.error);
     }
 
     return {
@@ -300,12 +322,12 @@ export async function placeOrder(rawInput: unknown): Promise<PlaceOrderResult> {
       orderNumber: created.orderNumber,
       accessToken: created.accessToken,
       paymentMethod: "card",
-      clientSecret: paymentIntent.client_secret,
+      paymentIframeUrl: token.iframeUrl,
       total: kurusToNumber(created.totalKurus),
     };
   } catch (error) {
     // Ödeme başlatılamadıysa rezerve edilen stok ve kupon hakkı geri verilir.
-    console.error("[placeOrder] PaymentIntent oluşturulamadı:", error);
+    console.error("[placeOrder] PayTR ödemesi başlatılamadı:", error);
     await releaseOrderReservation(created.id).catch((releaseError) =>
       console.error("[placeOrder] rezervasyon geri alınamadı:", releaseError)
     );

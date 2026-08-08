@@ -4,7 +4,7 @@ import { Footer } from "@/components/layout/Footer";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getSettings, settingBool } from "@/lib/settings";
-import { isStripeConfigured } from "@/lib/stripe";
+import { isPayTRConfigured } from "@/lib/paytr";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -22,11 +22,15 @@ export default async function CheckoutPage() {
   // Oturum açmış kullanıcı için formu ön doldur (kayıtlı varsayılan adres).
   let prefill = null;
 
+  // Doğrulanmamış e-posta uyarısı yalnızca üyeler için gösterilir; misafirin
+  // doğrulanacak bir hesabı yoktur.
+  let unverifiedEmail: string | null = null;
+
   if (session?.user?.id) {
     const [user, defaultAddress] = await Promise.all([
       prisma.user.findUnique({
         where: { id: session.user.id },
-        select: { name: true, email: true, phone: true },
+        select: { name: true, email: true, phone: true, emailVerified: true },
       }),
       prisma.address.findFirst({
         where: { userId: session.user.id },
@@ -35,6 +39,8 @@ export default async function CheckoutPage() {
     ]);
 
     if (user) {
+      if (!user.emailVerified) unverifiedEmail = user.email;
+
       const [firstName, ...rest] = (defaultAddress?.fullName ?? user.name ?? "").split(" ");
       prefill = {
         email: user.email,
@@ -55,15 +61,11 @@ export default async function CheckoutPage() {
       <main>
         <CheckoutContent
           prefill={prefill}
+          unverifiedEmail={unverifiedEmail}
           cardEnabled={
-            settingBool(settings, "payment.cardEnabled") && isStripeConfigured()
+            settingBool(settings, "payment.cardEnabled") && isPayTRConfigured()
           }
           transferEnabled={settingBool(settings, "payment.transferEnabled")}
-          stripePublishableKey={
-            isStripeConfigured()
-              ? process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? null
-              : null
-          }
           bank={{
             name: settings["bank.name"],
             accountHolder: settings["bank.accountHolder"],

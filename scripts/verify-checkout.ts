@@ -551,17 +551,18 @@ async function main() {
     });
     createdOrderIds.push(cardOrder.id);
 
+    const cardPaymentRef = `PAYTRTEST${cardOrder.id.replace(/[^a-zA-Z0-9]/g, "")}`;
+
     await prisma.order.update({
       where: { id: cardOrder.id },
-      data: { stripePaymentId: `pi_test_${cardOrder.id}` },
+      data: { paymentRef: cardPaymentRef },
     });
 
     // Yanlış tutarla ödeme denemesi
     const wrongAmount = await markOrderPaid({
       orderId: cardOrder.id,
-      paymentIntentId: `pi_test_${cardOrder.id}`,
+      paymentRef: cardPaymentRef,
       amountReceivedKurus: 1, // 1 kuruş!
-      currency: "try",
     });
     check(
       "Eksik tutarlı ödeme reddediliyor",
@@ -576,30 +577,27 @@ async function main() {
       (stillUnpaid!.adminNote ?? "").includes("ÖDEME UYUŞMAZLIĞI")
     );
 
-    // Yanlış para birimi
-    const wrongCurrency = await markOrderPaid({
+    // Fazla tutarla ödeme denemesi (taksit komisyonu kapalı → kabul edilmemeli)
+    const overAmount = await markOrderPaid({
       orderId: cardOrder.id,
-      paymentIntentId: `pi_test_${cardOrder.id}`,
-      amountReceivedKurus: cardOrder.totalKurus,
-      currency: "usd",
+      paymentRef: cardPaymentRef,
+      amountReceivedKurus: cardOrder.totalKurus + 100,
     });
-    check("Yanlış para birimi reddediliyor", wrongCurrency.status === "mismatch");
+    check("Fazla tutarlı ödeme reddediliyor", overAmount.status === "mismatch");
 
-    // Yanlış PaymentIntent
-    const wrongIntent = await markOrderPaid({
+    // Başkasının ödeme referansı
+    const wrongRef = await markOrderPaid({
       orderId: cardOrder.id,
-      paymentIntentId: "pi_baskasinin_odemesi",
+      paymentRef: "PAYTRBASKASININODEMESI",
       amountReceivedKurus: cardOrder.totalKurus,
-      currency: "try",
     });
-    check("Eşleşmeyen PaymentIntent reddediliyor", wrongIntent.status === "mismatch");
+    check("Eşleşmeyen ödeme referansı reddediliyor", wrongRef.status === "mismatch");
 
     // Doğru ödeme
     const correct = await markOrderPaid({
       orderId: cardOrder.id,
-      paymentIntentId: `pi_test_${cardOrder.id}`,
+      paymentRef: cardPaymentRef,
       amountReceivedKurus: cardOrder.totalKurus,
-      currency: "try",
     });
     check("Doğru tutarlı ödeme kabul ediliyor", correct.status === "paid", `durum: ${correct.status}`);
 
@@ -608,12 +606,11 @@ async function main() {
       paidRow!.paymentStatus === "PAID" && paidRow!.status === "PROCESSING");
     check("Ödeme tarihi kaydediliyor", paidRow!.paidAt !== null);
 
-    // Tekrarlanan webhook
+    // Tekrarlanan PayTR bildirimi
     const duplicate = await markOrderPaid({
       orderId: cardOrder.id,
-      paymentIntentId: `pi_test_${cardOrder.id}`,
+      paymentRef: cardPaymentRef,
       amountReceivedKurus: cardOrder.totalKurus,
-      currency: "try",
     });
     check(
       "Tekrarlanan ödeme olayı idempotent (already_paid)",

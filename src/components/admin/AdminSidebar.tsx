@@ -14,6 +14,7 @@ import {
   Mail,
   FolderTree,
   Newspaper,
+  Receipt,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
 
@@ -23,6 +24,7 @@ export function AdminSidebar() {
   const navItems = [
     { name: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
     { name: "Siparişler", href: "/admin/orders", icon: ShoppingBag },
+    { name: "Faturalar", href: "/admin/invoices", icon: Receipt },
     { name: "Ürünler", href: "/admin/products", icon: Package },
     { name: "Kategoriler", href: "/admin/categories", icon: FolderTree },
     { name: "Kuponlar", href: "/admin/coupons", icon: Ticket },

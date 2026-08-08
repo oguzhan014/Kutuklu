@@ -3,14 +3,11 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Heart, Trash2, Loader2, ShoppingBag } from "lucide-react";
-import { useWishlistStore } from "@/lib/wishlist-store";
-import { useWishlistHydrated } from "@/lib/use-wishlist-hydrated";
+import { useWishlist } from "@/lib/use-wishlist";
 import { formatPrice } from "@/lib/utils";
 
 export function WishlistContent() {
-  const items = useWishlistStore((state) => state.items);
-  const removeItem = useWishlistStore((state) => state.removeItem);
-  const hydrated = useWishlistHydrated();
+  const { items, hydrated, remove: removeItem } = useWishlist();
 
   if (!hydrated) {
     return (

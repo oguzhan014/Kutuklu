@@ -91,3 +91,21 @@ export const orderLookupSchema = z.object({
   orderNumber: z.string().trim().min(4, "Sipariş numarası girin").max(64),
   email: z.string().trim().toLowerCase().email("Geçerli bir e-posta girin").max(255),
 });
+
+/**
+ * Hesap silme onayı.
+ *
+ * Geri dönüşü olmayan bir işlem olduğu için hem şifre hem de elle yazılan
+ * bir onay ifadesi istenir; yanlışlıkla tıklamayla hesap silinemez.
+ */
+export const DELETE_ACCOUNT_PHRASE = "HESABIMI SIL";
+
+export const deleteAccountSchema = z.object({
+  password: z.string().min(1, "Şifrenizi girin").max(200),
+  confirmation: z
+    .string()
+    .trim()
+    .refine((value) => value.toLocaleUpperCase("tr-TR") === DELETE_ACCOUNT_PHRASE, {
+      message: `Onaylamak için "${DELETE_ACCOUNT_PHRASE}" yazın`,
+    }),
+});

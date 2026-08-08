@@ -9,6 +9,7 @@ import {
   PackageCheck,
   Landmark,
   AlertCircle,
+  Download,
 } from "lucide-react";
 
 import { Navbar } from "@/components/layout/Navbar";
@@ -57,7 +58,7 @@ export default async function OrderDetailPage({
 
   let order = access.order;
 
-  // Webhook henüz ulaşmadıysa ödeme durumunu Stripe'a sorarak doğrula.
+  // Bildirim henüz ulaşmadıysa ödeme durumunu PayTR'ye sorarak doğrula.
   if (order.paymentStatus === "UNPAID" && order.paymentMethod === "card") {
     const updated = await reconcileOrderPayment(order);
     if (updated) {
@@ -454,6 +455,26 @@ export default async function OrderDetailPage({
           </div>
 
           <div style={{ display: "flex", gap: "12px", justifyContent: "center", flexWrap: "wrap" }}>
+            {isPaid && (
+              <a
+                href={`/api/invoices/${order.orderNumber}/download`}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  background: "var(--color-gold)",
+                  color: "white",
+                  padding: "12px 28px",
+                  borderRadius: "4px",
+                  textDecoration: "none",
+                  fontWeight: 600,
+                  fontSize: "0.9rem",
+                }}
+              >
+                <Download size={16} />
+                Faturayı İndir
+              </a>
+            )}
             <Link
               href="/urunler"
               style={{

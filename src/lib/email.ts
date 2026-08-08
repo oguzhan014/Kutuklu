@@ -33,10 +33,16 @@ export function getFromAddress(): string {
   return process.env.EMAIL_FROM || "Kütüklü Zeytinyağı <onboarding@resend.dev>";
 }
 
+export type EmailAttachment = {
+  filename: string;
+  content: Buffer;
+};
+
 type SendEmailInput = {
   to: string;
   subject: string;
   html: string;
+  attachments?: EmailAttachment[];
 };
 
 /**
@@ -46,7 +52,12 @@ type SendEmailInput = {
  */
 export async function sendEmail(input: SendEmailInput): Promise<boolean> {
   if (!isEmailConfigured()) {
-    console.info(`[email] gönderilmedi (yapılandırılmamış): "${input.subject}" → ${input.to}`);
+    const attachmentNote = input.attachments?.length
+      ? ` (ek: ${input.attachments.map((a) => a.filename).join(", ")})`
+      : "";
+    console.info(
+      `[email] gönderilmedi (yapılandırılmamış): "${input.subject}" → ${input.to}${attachmentNote}`
+    );
     return false;
   }
 
@@ -56,6 +67,7 @@ export async function sendEmail(input: SendEmailInput): Promise<boolean> {
       to: input.to,
       subject: input.subject,
       html: input.html,
+      ...(input.attachments?.length ? { attachments: input.attachments } : {}),
     });
 
     if (result.error) {

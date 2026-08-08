@@ -33,7 +33,7 @@ export default async function GizlilikPolitikasiPage() {
         <li>Sipariş ve işlem bilgileri (satın alınan ürünler, tutar, sipariş geçmişi)</li>
         <li>
           Ödeme bilgileri — kart numaranız hiçbir zaman bizim sunucularımıza ulaşmaz;
-          ödemeler doğrudan Stripe altyapısı üzerinden, PCI-DSS uyumlu şekilde işlenir
+          ödemeler doğrudan PayTR altyapısı üzerinden, PCI-DSS uyumlu şekilde işlenir
         </li>
         <li>Hesap bilgileri (şifrelenmiş parola, üyelik tarihi)</li>
         <li>Site kullanım verileri (çerezler, IP adresi, tarayıcı bilgisi)</li>
@@ -53,7 +53,8 @@ export default async function GizlilikPolitikasiPage() {
       <h2>4. Kişisel Verilerin Aktarılması</h2>
       <p>
         Kişisel verileriniz; kargo süreçlerinin yürütülmesi için anlaşmalı kargo
-        firmalarına, ödeme işlemlerinin gerçekleştirilmesi için Stripe Inc.&apos;e ve yasal
+        firmalarına, ödeme işlemlerinin gerçekleştirilmesi için PayTR Ödeme ve Elektronik
+        Para Kuruluşu A.Ş.&apos;ye ve yasal
         zorunluluk hâllerinde yetkili kamu kurum ve kuruluşlarına, KVKK&apos;nın 8. ve 9.
         maddelerinde belirtilen şartlar dâhilinde aktarılabilir.
       </p>
@@ -81,7 +82,10 @@ export default async function GizlilikPolitikasiPage() {
         <li>İşlenme amacını ve amacına uygun kullanılıp kullanılmadığını öğrenme</li>
         <li>Yurt içinde/dışında aktarıldığı üçüncü kişileri bilme</li>
         <li>Eksik/yanlış işlenmişse düzeltilmesini isteme</li>
-        <li>KVKK&apos;da öngörülen şartlar çerçevesinde silinmesini/yok edilmesini isteme</li>
+        <li>
+          KVKK&apos;da öngörülen şartlar çerçevesinde silinmesini/yok edilmesini isteme
+          (yasal saklama yükümlülüğü bulunan kayıtlar hariç — bkz. 8. bölüm)
+        </li>
         <li>İşlemlerin, aktarıldığı üçüncü kişilere bildirilmesini isteme</li>
         <li>Aleyhinize bir sonucun ortaya çıkmasına itiraz etme</li>
         <li>Kanuna aykırı işleme sebebiyle zararın giderilmesini talep etme</li>
@@ -91,7 +95,25 @@ export default async function GizlilikPolitikasiPage() {
         adresine yazılı olarak başvurabilirsiniz.
       </p>
 
-      <h2>8. Veri Güvenliği</h2>
+      <h2>8. Hesabınızı Silme</h2>
+      <p>
+        Üyeyseniz hesabınızı dilediğiniz zaman{" "}
+        <a href="/hesabim/profil">Hesabım &rsaquo; Profil</a> sayfasından kendiniz
+        silebilirsiniz. Silme talebiniz üzerine adınız, e-posta adresiniz,
+        telefonunuz, kayıtlı adresleriniz ve ürün yorumlarınız kaldırılır; hesabınız
+        kapatılır ve tekrar giriş yapılamaz.
+      </p>
+      <p>
+        Ancak <strong>geçmiş siparişlerinize ait fatura ve satış kayıtları
+        silinemez</strong>. Bu belgeler Vergi Usul Kanunu ve Türk Ticaret Kanunu
+        uyarınca saklanması zorunlu ticari kayıtlardır; KVKK&apos;nın 7. maddesi de
+        silme hakkını, verinin başka bir kanun gereği saklanması gereken hâllerde
+        sınırlandırmaktadır. Bu kayıtlar yalnızca söz konusu yasal yükümlülüğün
+        yerine getirilmesi amacıyla, saklama süresi boyunca muhafaza edilir ve başka
+        hiçbir amaçla kullanılmaz.
+      </p>
+
+      <h2>9. Veri Güvenliği</h2>
       <p>
         Şifreleriniz geri döndürülemez biçimde (bcrypt) saklanır. Ödeme bilgileri hiçbir
         aşamada sunucularımızda tutulmaz. Hesap ve sipariş verilerine erişim, yalnızca

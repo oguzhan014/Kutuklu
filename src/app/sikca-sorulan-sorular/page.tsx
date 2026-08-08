@@ -38,7 +38,7 @@ export default async function SikcaSorulanSorularPage() {
     {
       question: "Hangi ödeme yöntemlerini kullanabilirim?",
       answer:
-        "Kredi/banka kartı (Stripe altyapısı üzerinden, 3D Secure destekli) ve banka havalesi/EFT ile ödeme yapabilirsiniz. Kart bilgileriniz hiçbir aşamada bizim sunucularımıza ulaşmaz.",
+        "Kredi/banka kartı (PayTR altyapısı üzerinden, 3D Secure destekli) ve banka havalesi/EFT ile ödeme yapabilirsiniz. Kart bilgileriniz hiçbir aşamada bizim sunucularımıza ulaşmaz.",
     },
     {
       question: "Üye olmadan sipariş verebilir miyim?",

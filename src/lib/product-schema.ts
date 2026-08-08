@@ -134,6 +134,16 @@ export const couponSchema = z
         message: "Kullanım limiti pozitif tam sayı olmalı",
       })
       .nullable(),
+    maxUsesPerUser: z
+      .union([z.string(), z.number()])
+      .transform((value) => {
+        const text = String(value).trim();
+        return text === "" ? null : Number(text);
+      })
+      .refine((value) => value === null || (Number.isInteger(value) && value > 0), {
+        message: "Kişi başı limit pozitif tam sayı olmalı",
+      })
+      .nullable(),
     isActive: z.boolean(),
     expiresAt: z
       .string()

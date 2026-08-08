@@ -187,10 +187,10 @@ export function SettingsForm({ settings }: Props) {
               onChange={(event) => update("cardEnabled", event.target.checked)}
               style={{ width: 18, height: 18, accentColor: "var(--color-green)" }}
             />
-            <span style={{ fontWeight: 500 }}>Kredi / Banka Kartı (Stripe)</span>
+            <span style={{ fontWeight: 500 }}>Kredi / Banka Kartı (PayTR)</span>
           </label>
           <span style={{ ...hintStyle, marginTop: 0, marginLeft: "28px" }}>
-            Etkin olması için .env dosyasında geçerli Stripe anahtarları tanımlı olmalıdır.
+            Etkin olması için .env dosyasında geçerli PayTR mağaza bilgileri tanımlı olmalıdır.
           </span>
 
           <label style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer" }}>

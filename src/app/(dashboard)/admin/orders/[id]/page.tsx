@@ -325,7 +325,7 @@ export default async function AdminOrderDetailPage({
                     })}
                   </div>
                 )}
-                {order.stripePaymentId && <div>Stripe: {order.stripePaymentId}</div>}
+                {order.paymentRef && <div>PayTR referansı: {order.paymentRef}</div>}
                 <div>Üyelik: {order.user ? order.user.email : "Misafir sipariş"}</div>
                 <div>Stok rezervasyonu: {order.stockReserved ? "Aktif" : "Serbest"}</div>
               </div>

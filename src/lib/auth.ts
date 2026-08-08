@@ -65,6 +65,7 @@ export const authOptions: NextAuthConfig = {
             role: true,
             password: true,
             image: true,
+            anonymizedAt: true,
           },
         });
 
@@ -76,6 +77,12 @@ export const authOptions: NextAuthConfig = {
         );
 
         if (!user || !user.password || !isCorrectPassword) {
+          return null;
+        }
+
+        // Silinmiş (anonimleştirilmiş) hesapla giriş yapılamaz. Şifre zaten
+        // temizlenmiş olur; bu kontrol ikinci savunma hattıdır.
+        if (user.anonymizedAt) {
           return null;
         }
 

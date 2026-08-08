@@ -19,6 +19,7 @@ export default async function AdminCouponsPage() {
     value: coupon.value.toString(),
     minOrderAmount: coupon.minOrderAmount ? coupon.minOrderAmount.toString() : null,
     maxUses: coupon.maxUses,
+    maxUsesPerUser: coupon.maxUsesPerUser,
     usedCount: coupon.usedCount,
     isActive: coupon.isActive,
     expiresAt: coupon.expiresAt ? coupon.expiresAt.toISOString() : null,

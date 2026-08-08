@@ -40,7 +40,7 @@ export default async function KullanimKosullariPage() {
       <p>
         Sipariş, ödeme onaylandığında (kredi kartı ile ödendiğinde) veya havale/EFT
         bildirimi doğrulandığında kesinleşir. Kart bilgileriniz Site sunucularında
-        saklanmaz; ödemeler Stripe altyapısı üzerinden güvenli şekilde işlenir.
+        saklanmaz; ödemeler PayTR altyapısı üzerinden güvenli şekilde işlenir.
       </p>
 
       <h2>5. Fikri Mülkiyet</h2>

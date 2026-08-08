@@ -48,3 +48,7 @@ next-env.d.ts
 # admin panelinden yüklenen ürün/blog görselleri — çalışma zamanı içeriği
 /public/uploads/*
 !/public/uploads/.gitkeep
+
+# müşteri faturaları — gizli, sunucuda tutulur
+/private/invoices/*
+!/private/invoices/.gitkeep

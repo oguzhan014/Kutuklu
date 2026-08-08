@@ -1,5 +1,5 @@
 import { getSettings } from "@/lib/settings";
-import { isStripeConfigured, isWebhookConfigured } from "@/lib/stripe";
+import { isPayTRConfigured, isPayTRTestMode } from "@/lib/paytr";
 import { isEmailConfigured } from "@/lib/email";
 import { SettingsForm } from "@/components/admin/SettingsForm";
 import { AlertTriangle, CheckCircle2 } from "lucide-react";
@@ -12,8 +12,8 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminSettingsPage() {
   const settings = await getSettings();
-  const stripeReady = isStripeConfigured();
-  const webhookReady = isWebhookConfigured();
+  const paytrReady = isPayTRConfigured();
+  const testMode = isPayTRTestMode();
   const emailReady = isEmailConfigured();
 
   return (
@@ -25,8 +25,8 @@ export default async function AdminSettingsPage() {
       {/* Ödeme altyapısı durumu */}
       <div
         style={{
-          background: stripeReady && webhookReady ? "#D1FAE5" : "#FEF3C7",
-          border: `1px solid ${stripeReady && webhookReady ? "#6EE7B7" : "#FCD34D"}`,
+          background: paytrReady ? "#D1FAE5" : "#FEF3C7",
+          border: `1px solid ${paytrReady ? "#6EE7B7" : "#FCD34D"}`,
           borderRadius: "12px",
           padding: "18px 22px",
           marginBottom: "24px",
@@ -40,43 +40,50 @@ export default async function AdminSettingsPage() {
             gap: "8px",
             fontSize: "0.95rem",
             fontWeight: 700,
-            color: stripeReady && webhookReady ? "#047857" : "#92400E",
+            color: paytrReady ? "#047857" : "#92400E",
             marginBottom: "10px",
           }}
         >
-          {stripeReady && webhookReady ? <CheckCircle2 size={17} /> : <AlertTriangle size={17} />}
-          Ödeme Altyapısı Durumu
+          {paytrReady ? <CheckCircle2 size={17} /> : <AlertTriangle size={17} />}
+          Ödeme Altyapısı Durumu (PayTR)
         </h2>
 
         <ul
           style={{
             listStyle: "none",
             fontSize: "0.85rem",
-            color: stripeReady && webhookReady ? "#047857" : "#92400E",
+            color: paytrReady ? "#047857" : "#92400E",
             lineHeight: 1.9,
             padding: 0,
             margin: 0,
           }}
         >
           <li>
-            {stripeReady ? "✓" : "✕"} Stripe API anahtarları{" "}
-            {stripeReady ? "tanımlı" : "tanımlı değil — kart ödemesi devre dışı"}
+            {paytrReady ? "✓" : "✕"} PayTR mağaza bilgileri{" "}
+            {paytrReady ? "tanımlı" : "tanımlı değil — kart ödemesi devre dışı"}
           </li>
           <li>
-            {webhookReady ? "✓" : "✕"} Webhook imza anahtarı{" "}
-            {webhookReady
-              ? "tanımlı"
-              : "tanımlı değil — ödemeler otomatik onaylanamaz"}
+            {paytrReady && !testMode ? "✓" : "!"}{" "}
+            {testMode
+              ? "TEST MODU açık — gerçek para tahsil edilmez"
+              : "Canlı mod açık — gerçek tahsilat yapılır"}
           </li>
         </ul>
 
-        {(!stripeReady || !webhookReady) && (
+        {!paytrReady && (
           <p style={{ fontSize: "0.8rem", color: "#92400E", marginTop: "12px", lineHeight: 1.6 }}>
-            <code>.env</code> dosyasına <code>STRIPE_SECRET_KEY</code>,{" "}
-            <code>NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY</code> ve{" "}
-            <code>STRIPE_WEBHOOK_SECRET</code> değerlerini girin. Yerel testte webhook
-            anahtarını <code>stripe listen --forward-to localhost:3000/api/webhooks/stripe</code>{" "}
-            komutu verir.
+            <code>.env</code> dosyasına <code>PAYTR_MERCHANT_ID</code>,{" "}
+            <code>PAYTR_MERCHANT_KEY</code> ve <code>PAYTR_MERCHANT_SALT</code> değerlerini
+            girin. Bu üç değeri PayTR mağaza panelindeki “Bilgi” sayfasından alabilirsiniz.
+          </p>
+        )}
+
+        {paytrReady && (
+          <p style={{ fontSize: "0.8rem", color: "#047857", marginTop: "12px", lineHeight: 1.6 }}>
+            PayTR mağaza panelinde <strong>Bildirim URL</strong> alanı{" "}
+            <code>{`${process.env.NEXT_PUBLIC_SITE_URL ?? "https://alan-adiniz"}/api/webhooks/paytr`}</code>{" "}
+            olarak tanımlı olmalıdır; ödemeler ancak bu adrese gelen imzalı bildirimle
+            onaylanır.
           </p>
         )}
       </div>

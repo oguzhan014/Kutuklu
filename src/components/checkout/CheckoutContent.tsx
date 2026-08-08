@@ -26,7 +26,8 @@ import {
   placeOrder,
   type CartSummary,
 } from "@/app/actions/checkout";
-import { StripePaymentStep } from "@/components/checkout/StripePaymentStep";
+import { PayTRPaymentStep } from "@/components/checkout/PayTRPaymentStep";
+import { EmailVerificationNotice } from "@/components/checkout/EmailVerificationNotice";
 
 /**
  * ÖDEME EKRANI
@@ -35,9 +36,9 @@ import { StripePaymentStep } from "@/components/checkout/StripePaymentStep";
  *  1. Ekranda gösterilen HER tutar sunucudan (`getCartSummary`) gelir.
  *     Bu bileşen hiçbir fiyat hesaplaması yapmaz ve sunucuya tutar göndermez.
  *     Sunucuya giden tek sepet bilgisi: ürün kimliği ve adet.
- *  2. Kart bilgileri bu forma HİÇ girilmez. Kart verisi Stripe'ın kendi
- *     iframe'i (PaymentElement) üzerinden doğrudan Stripe'a gider; sunucumuz
- *     ve bu sayfa kart numarasını asla görmez (PCI-DSS kapsamı dışında kalır).
+ *  2. Kart bilgileri bu forma HİÇ girilmez. Kart verisi PayTR'nin kendi
+ *     iframe'i üzerinden doğrudan PayTR'ye gider; sunucumuz ve bu sayfa kart
+ *     numarasını asla görmez (PCI-DSS kapsamı dışında kalır).
  */
 
 type Prefill = {
@@ -53,9 +54,10 @@ type Prefill = {
 
 type Props = {
   prefill: Prefill;
+  /** Üye giriş yapmış ama e-postası doğrulanmamışsa adresi; aksi hâlde null. */
+  unverifiedEmail: string | null;
   cardEnabled: boolean;
   transferEnabled: boolean;
-  stripePublishableKey: string | null;
   bank: { name: string; accountHolder: string; iban: string };
   store: {
     name: string;
@@ -108,9 +110,9 @@ function FieldError({ message }: { message?: string }) {
 
 export function CheckoutContent({
   prefill,
+  unverifiedEmail,
   cardEnabled,
   transferEnabled,
-  stripePublishableKey,
   bank,
   store,
 }: Props) {
@@ -162,7 +164,7 @@ export function CheckoutContent({
 
   // ── Kart ödeme adımı ─────────────────────────────────────
   const [payment, setPayment] = useState<{
-    clientSecret: string;
+    iframeUrl: string;
     orderNumber: string;
     accessToken: string;
   } | null>(null);
@@ -297,9 +299,9 @@ export function CheckoutContent({
         return;
       }
 
-      if (result.clientSecret) {
+      if (result.paymentIframeUrl) {
         setPayment({
-          clientSecret: result.clientSecret,
+          iframeUrl: result.paymentIframeUrl,
           orderNumber: result.orderNumber,
           accessToken: result.accessToken,
         });
@@ -374,13 +376,11 @@ export function CheckoutContent({
   }
 
   // ── Kart ödeme adımı ─────────────────────────────────────
-  if (payment && stripePublishableKey) {
+  if (payment) {
     return (
-      <StripePaymentStep
-        publishableKey={stripePublishableKey}
-        clientSecret={payment.clientSecret}
+      <PayTRPaymentStep
+        iframeUrl={payment.iframeUrl}
         orderNumber={payment.orderNumber}
-        accessToken={payment.accessToken}
         total={summary?.total ?? 0}
         onBack={() => setPayment(null)}
       />
@@ -427,6 +427,9 @@ export function CheckoutContent({
             <AlertCircle size={18} /> {formError}
           </div>
         )}
+
+        {/* Doğrulanmamış üye e-postası — siparişi engellemez, yalnızca ister. */}
+        {unverifiedEmail && <EmailVerificationNotice email={unverifiedEmail} />}
 
         <form onSubmit={handleSubmit}>
           <div
@@ -918,7 +921,7 @@ export function CheckoutContent({
                       </strong>
                       <br />
                       Siparişinizi onayladıktan sonra, kart bilgilerinizi doğrudan ödeme
-                      kuruluşunun (Stripe) güvenli formuna gireceksiniz. Kart numaranız bizim
+                      kuruluşunun (PayTR) güvenli formuna gireceksiniz. Kart numaranız bizim
                       sunucularımıza hiçbir zaman ulaşmaz.
                     </div>
                   </div>
