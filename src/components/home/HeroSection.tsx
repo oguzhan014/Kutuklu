@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, Shield, Leaf, Thermometer, Sparkles, Droplets } from "lucide-react";
+import { ArrowRight, Shield, Leaf, Thermometer, Sparkles, Droplets, Award } from "lucide-react";
 
 const badges = [
   { Icon: Leaf, label: "Ücretsiz Kargo (500₺+)" },
@@ -29,8 +29,8 @@ export function HeroSection() {
         style={{
           position: "absolute",
           inset: 0,
-          backgroundImage: `radial-gradient(circle at 75% 45%, rgba(212, 175, 55, 0.12) 0%, transparent 60%),
-                            radial-gradient(circle at 15% 75%, rgba(47, 79, 47, 0.08) 0%, transparent 55%)`,
+          backgroundImage: `radial-gradient(circle at 75% 45%, rgba(212, 175, 55, 0.15) 0%, transparent 60%),
+                            radial-gradient(circle at 15% 75%, rgba(47, 79, 47, 0.1) 0%, transparent 55%)`,
           pointerEvents: "none",
         }}
       />
@@ -50,8 +50,8 @@ export function HeroSection() {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: "64px",
+            gridTemplateColumns: "1fr 1.05fr",
+            gap: "56px",
             alignItems: "center",
             width: "100%",
           }}
@@ -64,18 +64,19 @@ export function HeroSection() {
                 display: "inline-flex",
                 alignItems: "center",
                 gap: "8px",
-                background: "rgba(212, 175, 55, 0.12)",
-                border: "1px solid rgba(212, 175, 55, 0.35)",
-                padding: "6px 14px",
-                borderRadius: "20px",
+                background: "rgba(212, 175, 55, 0.15)",
+                border: "1px solid rgba(212, 175, 55, 0.4)",
+                padding: "6px 16px",
+                borderRadius: "30px",
                 marginBottom: "22px",
+                backdropFilter: "blur(6px)",
               }}
             >
-              <Sparkles size={13} color="var(--color-gold-dark)" />
+              <Sparkles size={14} color="var(--color-gold-dark)" />
               <span
                 style={{
                   fontFamily: "var(--font-body)",
-                  fontSize: "0.72rem",
+                  fontSize: "0.74rem",
                   fontWeight: 700,
                   letterSpacing: "0.15em",
                   textTransform: "uppercase",
@@ -117,11 +118,11 @@ export function HeroSection() {
             </p>
 
             <div style={{ display: "flex", gap: "16px", flexWrap: "wrap" }}>
-              <Link href="/urunler" className="btn-gold">
+              <Link href="/urunler" className="btn-gold" style={{ boxShadow: "0 8px 24px rgba(212, 175, 55, 0.35)" }}>
                 Koleksiyonu Keşfet
                 <ArrowRight size={16} />
               </Link>
-              <Link href="/hikayemiz" className="btn-outline">
+              <Link href="/hikayemiz" className="btn-outline" style={{ background: "rgba(255,255,255,0.7)" }}>
                 Bizim Hikayemiz
               </Link>
             </div>
@@ -134,7 +135,7 @@ export function HeroSection() {
                 gap: "20px",
                 marginTop: "48px",
                 paddingTop: "32px",
-                borderTop: "1px solid rgba(212, 175, 55, 0.2)",
+                borderTop: "1px solid rgba(212, 175, 55, 0.3)",
                 maxWidth: "480px",
               }}
             >
@@ -172,7 +173,7 @@ export function HeroSection() {
             </div>
           </div>
 
-          {/* Sağ: Ürün Görseli ve Canlı Derinlik Katmanı */}
+          {/* Sağ: Gerçek Fotoğrafik Şişe Vitrini */}
           <div
             style={{
               display: "flex",
@@ -188,95 +189,74 @@ export function HeroSection() {
               className="pulse-glow"
               style={{
                 position: "absolute",
-                width: "420px",
-                height: "420px",
-                background: "radial-gradient(circle, rgba(212,175,55,0.18) 0%, rgba(47,79,47,0.06) 50%, transparent 70%)",
+                width: "480px",
+                height: "480px",
+                background: "radial-gradient(circle, rgba(212,175,55,0.22) 0%, rgba(47,79,47,0.08) 50%, transparent 70%)",
                 borderRadius: "50%",
               }}
             />
 
-            {/* Şişe Mockup Kartı */}
+            {/* Gerçek Fotoğrafik Vitrin Kartı */}
             <div
               className="float-slow"
               style={{
                 position: "relative",
                 zIndex: 2,
-                filter: "drop-shadow(0 25px 50px rgba(47, 79, 47, 0.18))",
+                borderRadius: "28px",
+                overflow: "hidden",
+                boxShadow: "0 30px 70px rgba(47, 79, 47, 0.22), 0 0 0 1px rgba(212, 175, 55, 0.4)",
+                maxWidth: "460px",
+                width: "100%",
               }}
             >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/images/hero-bottle-real.png"
+                alt="Kütüklü 1950 Erken Hasat Soğuk Sıkım Natürel Sızma Zeytinyağı"
+                style={{
+                  width: "100%",
+                  height: "480px",
+                  objectFit: "cover",
+                  display: "block",
+                }}
+              />
+
+              {/* Alt Cam Etiket Şeridi */}
               <div
                 style={{
-                  width: 320,
-                  height: 460,
-                  background: "linear-gradient(145deg, rgba(255,255,255,0.85) 0%, rgba(245,241,232,0.65) 100%)",
-                  backdropFilter: "blur(12px)",
-                  WebkitBackdropFilter: "blur(12px)",
-                  borderRadius: "20px",
-                  border: "1px solid rgba(212,175,55,0.35)",
+                  position: "absolute",
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  background: "linear-gradient(180deg, rgba(28, 28, 28, 0) 0%, rgba(20, 30, 20, 0.92) 100%)",
+                  padding: "32px 24px 20px 24px",
+                  color: "var(--color-cream)",
                   display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: "20px",
-                  padding: "32px",
-                  boxShadow: "0 20px 40px rgba(28,28,28,0.06)",
+                  alignItems: "flex-end",
+                  justifyContent: "space-between",
                 }}
               >
-                <div
-                  style={{
-                    width: 100,
-                    height: 100,
-                    borderRadius: "50%",
-                    background: "linear-gradient(135deg, var(--color-green) 0%, #1c331c 100%)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    boxShadow: "0 8px 24px rgba(47, 79, 47, 0.25)",
-                  }}
-                >
-                  <Leaf size={48} color="var(--color-gold)" strokeWidth={1.5} />
+                <div>
+                  <div style={{ fontSize: "0.72rem", color: "var(--color-gold-light)", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase" }}>
+                    Özel Seri • 500ml Cam Şişe
+                  </div>
+                  <div style={{ fontFamily: "var(--font-heading)", fontSize: "1.4rem", fontWeight: 600 }}>
+                    Kütüklü Erken Hasat
+                  </div>
                 </div>
 
-                <div style={{ textAlign: "center" }}>
-                  <div
-                    style={{
-                      fontFamily: "var(--font-heading)",
-                      fontSize: "2rem",
-                      fontWeight: 600,
-                      color: "var(--color-black)",
-                      letterSpacing: "0.02em",
-                    }}
-                  >
-                    Kütüklü
-                  </div>
-                  <div
-                    style={{
-                      fontSize: "0.78rem",
-                      letterSpacing: "0.15em",
-                      color: "var(--color-green)",
-                      textTransform: "uppercase",
-                      fontWeight: 600,
-                      marginTop: "4px",
-                    }}
-                  >
-                    Natürel Sızma Zeytinyağı
-                  </div>
-                  <div
-                    style={{
-                      marginTop: "12px",
-                      display: "inline-block",
-                      background: "rgba(212,175,55,0.15)",
-                      border: "1px solid rgba(212,175,55,0.4)",
-                      padding: "4px 12px",
-                      borderRadius: "12px",
-                      fontSize: "0.72rem",
-                      color: "var(--color-gold-dark)",
-                      fontWeight: 700,
-                      letterSpacing: "0.05em",
-                    }}
-                  >
-                    ✦ ERKEN HASAT · 500 ML ✦
-                  </div>
+                <div
+                  style={{
+                    background: "rgba(212, 175, 55, 0.25)",
+                    border: "1px solid var(--color-gold)",
+                    padding: "6px 12px",
+                    borderRadius: "12px",
+                    fontSize: "0.75rem",
+                    fontWeight: 700,
+                    color: "var(--color-gold-light)",
+                  }}
+                >
+                  ≤ %0.28 Asit
                 </div>
               </div>
             </div>
@@ -285,26 +265,27 @@ export function HeroSection() {
             <div
               style={{
                 position: "absolute",
-                top: "30px",
-                left: "-10px",
+                top: "20px",
+                left: "-12px",
                 zIndex: 3,
-                background: "var(--color-white)",
-                border: "1px solid rgba(212, 175, 55, 0.35)",
+                background: "rgba(255, 255, 255, 0.92)",
+                backdropFilter: "blur(10px)",
+                border: "1px solid rgba(212, 175, 55, 0.4)",
                 padding: "10px 16px",
-                borderRadius: "10px",
-                boxShadow: "0 10px 25px rgba(0,0,0,0.08)",
+                borderRadius: "14px",
+                boxShadow: "0 10px 30px rgba(0,0,0,0.1)",
                 display: "flex",
                 alignItems: "center",
-                gap: "8px",
+                gap: "10px",
               }}
             >
               <span className="green-pulse-dot" />
               <div>
-                <div style={{ fontSize: "0.7rem", color: "var(--color-gray-500)", textTransform: "uppercase" }}>
-                  Yeni Sezon
+                <div style={{ fontSize: "0.68rem", color: "var(--color-gray-500)", textTransform: "uppercase" }}>
+                  Yeni Sezon Hasadı
                 </div>
-                <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--color-green)" }}>
-                  2026 Hasadı
+                <div style={{ fontSize: "0.85rem", fontWeight: 800, color: "var(--color-green)" }}>
+                  2026 Taze Sıkım
                 </div>
               </div>
             </div>
@@ -313,21 +294,28 @@ export function HeroSection() {
             <div
               style={{
                 position: "absolute",
-                bottom: "20px",
-                right: "-10px",
+                bottom: "-15px",
+                right: "-12px",
                 zIndex: 3,
-                background: "var(--color-green)",
+                background: "linear-gradient(135deg, var(--color-green) 0%, #152215 100%)",
+                border: "1px solid var(--color-gold)",
                 color: "var(--color-cream)",
                 padding: "12px 18px",
-                borderRadius: "10px",
-                boxShadow: "0 12px 30px rgba(47,79,47,0.3)",
+                borderRadius: "14px",
+                boxShadow: "0 12px 30px rgba(47,79,47,0.35)",
                 textAlign: "center",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
               }}
             >
-              <div style={{ fontSize: "0.7rem", color: "var(--color-gold)", textTransform: "uppercase", letterSpacing: "0.1em" }}>
-                Asitlik Oranı
+              <Award size={20} color="var(--color-gold-light)" />
+              <div>
+                <div style={{ fontSize: "0.68rem", color: "var(--color-gold-light)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                  Garanti
+                </div>
+                <div style={{ fontSize: "0.92rem", fontWeight: 800 }}>%100 Saf & Doğal</div>
               </div>
-              <div style={{ fontSize: "1.25rem", fontWeight: 800 }}>≤ %0.28</div>
             </div>
           </div>
         </div>
@@ -378,4 +366,3 @@ export function HeroSection() {
     </section>
   );
 }
-

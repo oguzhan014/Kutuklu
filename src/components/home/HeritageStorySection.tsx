@@ -32,57 +32,75 @@ export function HeritageStorySection() {
           style={{
             display: "grid",
             gridTemplateColumns: "1fr 1.15fr",
-            gap: "64px",
+            gap: "56px",
             alignItems: "center",
           }}
           className="hero-grid"
         >
-          {/* Sol: Prestij Miras Kartı & Altın Mühür */}
+          {/* Sol: Prestij Miras Kartı & Hasat Fotoğrafı */}
           <div style={{ position: "relative" }}>
             <div
               className="glass-panel"
               style={{
                 borderRadius: "24px",
-                padding: "40px 32px",
+                padding: "32px",
                 border: "1px solid rgba(212, 175, 55, 0.4)",
                 boxShadow: "0 25px 50px rgba(47, 79, 47, 0.09)",
                 position: "relative",
                 background: "linear-gradient(145deg, rgba(255,255,255,0.95) 0%, rgba(248,244,233,0.85) 100%)",
               }}
             >
-              {/* Üst Köy Etiketi */}
+              {/* Gerçek Hasat Elleri Fotoğrafı */}
               <div
                 style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "8px",
-                  background: "rgba(47, 79, 47, 0.08)",
-                  padding: "6px 14px",
-                  borderRadius: "20px",
+                  borderRadius: "16px",
+                  overflow: "hidden",
                   marginBottom: "24px",
+                  border: "1px solid rgba(212, 175, 55, 0.3)",
+                  position: "relative",
+                  height: "220px",
                 }}
               >
-                <Sprout size={15} color="var(--color-green)" />
-                <span
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/images/harvest-hands-real.png"
+                  alt="Kütüklü Zeytin Hasadı ve Emektar Eller"
                   style={{
-                    fontSize: "0.75rem",
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                  }}
+                />
+                <div
+                  style={{
+                    position: "absolute",
+                    top: 12,
+                    left: 12,
+                    background: "rgba(0, 0, 0, 0.65)",
+                    backdropFilter: "blur(6px)",
+                    color: "var(--color-cream)",
+                    padding: "4px 10px",
+                    borderRadius: "20px",
+                    fontSize: "0.7rem",
                     fontWeight: 700,
-                    color: "var(--color-green)",
-                    letterSpacing: "0.1em",
-                    textTransform: "uppercase",
+                    letterSpacing: "0.05em",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px",
                   }}
                 >
-                  Kütüklü Köyü / Ege
-                </span>
+                  <Sprout size={13} color="var(--color-gold-light)" />
+                  Geleneksel El Hasadı
+                </div>
               </div>
 
               <h3
                 style={{
                   fontFamily: "var(--font-heading)",
-                  fontSize: "clamp(1.6rem, 2.4vw, 2.1rem)",
+                  fontSize: "clamp(1.5rem, 2.2vw, 1.9rem)",
                   fontWeight: 600,
                   color: "var(--color-black)",
-                  marginBottom: "16px",
+                  marginBottom: "12px",
                   lineHeight: 1.25,
                 }}
               >
@@ -91,27 +109,27 @@ export function HeritageStorySection() {
 
               <p
                 style={{
-                  fontSize: "0.92rem",
+                  fontSize: "0.9rem",
                   color: "var(--color-gray-600)",
-                  lineHeight: 1.8,
-                  marginBottom: "28px",
+                  lineHeight: 1.75,
+                  marginBottom: "24px",
                 }}
               >
-                Dedelerimizin elleriyle diktiği asırlık zeytin ağaçlarına bugün aynı hürmet ve sevgiyle bakıyoruz. Sanayileşmiş seri üretimin aksine, her hasatta sınırlı miktarda ve sadece kendi bahçelerimizden üretim yapıyoruz.
+                Dedelerimizin elleriyle diktiği asırlık zeytin ağaçlarına bugün aynı hürmet ve sevgiyle bakıyoruz. Sadece kendi bahçelerimizden sınırlı miktarda üretim yapıyoruz.
               </p>
 
               {/* 3 Temel İlke */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                 {[
                   { title: "Sıfır Karışım & Saf Tek Bahçe", desc: "Dışarıdan zeytin veya yağ satın almaz, yalnızca kendi ağaçlarımızı sıkarız." },
                   { title: "Geleneksel Sevgi, Modern Hijyen", desc: "El hasadını en ileri teknoloji kapalı devre soğuk sıkım ile buluşturuyoruz." },
                   { title: "Aracısız Üreticiden Tüketiciye", desc: "Köyümüzdeki depomuzdan doğrudan mutfağınıza taze dolumla gönderiyoruz." },
                 ].map((item, idx) => (
-                  <div key={idx} style={{ display: "flex", alignItems: "flex-start", gap: "12px" }}>
+                  <div key={idx} style={{ display: "flex", alignItems: "flex-start", gap: "10px" }}>
                     <div
                       style={{
-                        width: 24,
-                        height: 24,
+                        width: 22,
+                        height: 22,
                         borderRadius: "50%",
                         background: "rgba(212, 175, 55, 0.2)",
                         border: "1px solid var(--color-gold)",
@@ -122,13 +140,13 @@ export function HeritageStorySection() {
                         marginTop: "2px",
                       }}
                     >
-                      <CheckCircle2 size={14} color="var(--color-green)" />
+                      <CheckCircle2 size={13} color="var(--color-green)" />
                     </div>
                     <div>
-                      <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--color-black)" }}>
+                      <div style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--color-black)" }}>
                         {item.title}
                       </div>
-                      <div style={{ fontSize: "0.78rem", color: "var(--color-gray-500)", lineHeight: 1.4 }}>
+                      <div style={{ fontSize: "0.75rem", color: "var(--color-gray-500)", lineHeight: 1.35 }}>
                         {item.desc}
                       </div>
                     </div>
@@ -142,10 +160,10 @@ export function HeritageStorySection() {
               className="float-slow"
               style={{
                 position: "absolute",
-                bottom: "-25px",
-                right: "-20px",
-                width: "110px",
-                height: "110px",
+                bottom: "-20px",
+                right: "-15px",
+                width: "105px",
+                height: "105px",
                 borderRadius: "50%",
                 background: "linear-gradient(135deg, var(--color-gold) 0%, #B38E22 100%)",
                 boxShadow: "0 12px 30px rgba(212, 175, 55, 0.4)",
@@ -155,16 +173,16 @@ export function HeritageStorySection() {
                 justifyContent: "center",
                 color: "var(--color-black)",
                 textAlign: "center",
-                padding: "10px",
+                padding: "8px",
                 border: "3px solid #FFF8E7",
                 zIndex: 3,
               }}
             >
-              <Award size={22} color="var(--color-black)" />
-              <div style={{ fontFamily: "var(--font-heading)", fontSize: "1.2rem", fontWeight: 800, lineHeight: 1, marginTop: "2px" }}>
+              <Award size={20} color="var(--color-black)" />
+              <div style={{ fontFamily: "var(--font-heading)", fontSize: "1.1rem", fontWeight: 800, lineHeight: 1, marginTop: "2px" }}>
                 3. NESİL
               </div>
-              <div style={{ fontSize: "0.58rem", fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase" }}>
+              <div style={{ fontSize: "0.55rem", fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase" }}>
                 AİLE MİRASI
               </div>
             </div>

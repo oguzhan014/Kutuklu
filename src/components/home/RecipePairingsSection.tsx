@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Utensils, Clock, Flame, ShoppingCart, Check, ChefHat, Sparkles } from "lucide-react";
+import { Clock, ShoppingCart, Check, ChefHat, Sparkles } from "lucide-react";
 import { useCartStore } from "@/lib/store";
 import { formatPrice } from "@/lib/utils";
 
@@ -107,28 +107,69 @@ export function RecipePairingsSection() {
       aria-label="Şefin Sofrasından Zeytinyağlı Eşleşmeler"
     >
       <div className="container">
-        {/* Başlık */}
-        <div style={{ textAlign: "center", maxWidth: 700, margin: "0 auto 52px auto" }}>
-          <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", marginBottom: "8px" }}>
-            <ChefHat size={16} color="var(--color-gold)" />
-            <span className="section-tag" style={{ marginBottom: 0 }}>
-              Gastronomi & İlham
-            </span>
+        {/* Üst Gastronomi Vitrin Başlığı ve Görsel Banner */}
+        <div
+          style={{
+            background: "linear-gradient(135deg, #1C261C 0%, #203320 50%, #152215 100%)",
+            borderRadius: "24px",
+            overflow: "hidden",
+            display: "grid",
+            gridTemplateColumns: "1.1fr 1fr",
+            gap: "32px",
+            alignItems: "center",
+            marginBottom: "50px",
+            border: "1px solid rgba(212, 175, 55, 0.3)",
+            boxShadow: "0 20px 40px rgba(0,0,0,0.08)",
+          }}
+          className="hero-grid"
+        >
+          <div style={{ padding: "48px 40px", color: "var(--color-cream)" }}>
+            <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", marginBottom: "12px" }}>
+              <ChefHat size={16} color="var(--color-gold-light)" />
+              <span
+                style={{
+                  fontSize: "0.75rem",
+                  fontWeight: 700,
+                  letterSpacing: "0.15em",
+                  textTransform: "uppercase",
+                  color: "var(--color-gold-light)",
+                }}
+              >
+                Gastronomi & Eşleşmeler
+              </span>
+            </div>
+
+            <h2
+              style={{
+                fontFamily: "var(--font-heading)",
+                fontSize: "clamp(2rem, 3.2vw, 2.8rem)",
+                fontWeight: 500,
+                color: "var(--color-cream)",
+                marginBottom: "16px",
+                lineHeight: 1.2,
+              }}
+            >
+              Şefin Sofrasından: Zeytinyağlı İlhamlar
+            </h2>
+
+            <p style={{ color: "rgba(245, 241, 232, 0.8)", fontSize: "0.95rem", lineHeight: 1.7 }}>
+              Saf soğuk sıkım zeytinyağı, yalnızca bir pişirme yağı değil; sıcak köy ekmeğini batırdığınızda damakta çiçek açan bir lezzet şölenidir.
+            </p>
           </div>
-          <h2
-            style={{
-              fontFamily: "var(--font-heading)",
-              fontSize: "clamp(2rem, 3.5vw, 3rem)",
-              fontWeight: 500,
-              color: "var(--color-black)",
-              marginBottom: "14px",
-            }}
-          >
-            Şefin Sofrasından: Zeytinyağlı Eşleşmeler
-          </h2>
-          <p style={{ color: "var(--color-gray-600)", fontSize: "0.95rem", lineHeight: 1.6 }}>
-            Saf zeytinyağı sadece bir pişirme malzemesi değil, tabakların başrol oyuncusudur. İşte mutfağınıza ilham verecek özel tarifler.
-          </p>
+
+          <div style={{ height: "100%", minHeight: "280px", position: "relative" }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/images/table-pairing-real.png"
+              alt="Kütüklü Zeytinyağlı Gurme Eşleşme Sofrası"
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                display: "block",
+              }}
+            />
+          </div>
         </div>
 
         {/* 3'lü Tarif Kartları */}
