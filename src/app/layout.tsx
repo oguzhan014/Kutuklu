@@ -3,9 +3,6 @@ import "./globals.css";
 import { SITE_URL } from "@/lib/site";
 
 export const metadata: Metadata = {
-  // Göreli yolların (OG görseli, canonical) mutlak URL'ye çevrilmesi için
-  // gereklidir. Tanımsızsa sosyal medyada paylaşılan bağlantılarda önizleme
-  // görseli çıkmaz.
   metadataBase: new URL(SITE_URL),
   title: {
     default: "Kütüklü Zeytinyağı | Köyden Sofraya, Doğanın Saflığı",
@@ -33,6 +30,7 @@ export const metadata: Metadata = {
 import { CartSidebar } from "@/components/cart/CartSidebar";
 import { FavoritesSync } from "@/components/wishlist/FavoritesSync";
 import { SocialProofToast } from "@/components/common/SocialProofToast";
+import { WhatsAppButton } from "@/components/common/WhatsAppButton";
 
 export default function RootLayout({
   children,
@@ -46,8 +44,8 @@ export default function RootLayout({
         <CartSidebar />
         <FavoritesSync />
         <SocialProofToast />
+        <WhatsAppButton />
       </body>
     </html>
   );
 }
-
